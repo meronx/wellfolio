@@ -16,6 +16,7 @@ const (
 chartURL            = "https://query1.finance.yahoo.com/v8/finance/chart/%s?range=1d&interval=1d"
 searchURL           = "https://query2.finance.yahoo.com/v1/finance/search?q=%s&quotesCount=10&newsCount=0"
 histURL             = "https://query2.finance.yahoo.com/v8/finance/chart/%s?range=%s&interval=%s&events=div&includeAdjustedClose=true"
+assetProfileURL     = "https://query2.finance.yahoo.com/v10/finance/quoteSummary/%s?modules=assetProfile"
 divHistoryPeriod    = "5y"
 divHistoryInterval  = "1mo"
 )
@@ -90,6 +91,25 @@ LongName  string `json:"longname"`
 Exchange  string `json:"exchange"`
 QuoteType string `json:"quoteType"`
 } `json:"quotes"`
+}
+
+// yahooQuoteSummaryResponse matches the Yahoo Finance v10 quoteSummary assetProfile module.
+type yahooQuoteSummaryResponse struct {
+QuoteSummary struct {
+Result []struct {
+AssetProfile struct {
+Sector              string `json:"sector"`
+Industry            string `json:"industry"`
+Country             string `json:"country"`
+Website             string `json:"website"`
+LongBusinessSummary string `json:"longBusinessSummary"`
+} `json:"assetProfile"`
+} `json:"result"`
+Error *struct {
+Code        string `json:"code"`
+Description string `json:"description"`
+} `json:"error"`
+} `json:"quoteSummary"`
 }
 
 func doGet(rawURL string) ([]byte, error) {
@@ -289,4 +309,35 @@ QuoteType: q.QuoteType,
 })
 }
 return results, nil
+}
+
+// GetAssetProfile fetches sector, industry and country information from Yahoo Finance.
+func GetAssetProfile(symbol string) (*models.AssetProfile, error) {
+rawURL := fmt.Sprintf(assetProfileURL, url.PathEscape(symbol))
+body, err := doGet(rawURL)
+if err != nil {
+return nil, err
+}
+
+var parsed yahooQuoteSummaryResponse
+if err := json.Unmarshal(body, &parsed); err != nil {
+return nil, err
+}
+if parsed.QuoteSummary.Error != nil {
+return nil, fmt.Errorf("yahoo finance error: %s – %s",
+parsed.QuoteSummary.Error.Code, parsed.QuoteSummary.Error.Description)
+}
+if len(parsed.QuoteSummary.Result) == 0 {
+return nil, fmt.Errorf("no asset profile for symbol %s", symbol)
+}
+
+ap := parsed.QuoteSummary.Result[0].AssetProfile
+return &models.AssetProfile{
+Symbol:      symbol,
+Sector:      ap.Sector,
+Industry:    ap.Industry,
+Country:     ap.Country,
+Website:     ap.Website,
+Description: ap.LongBusinessSummary,
+}, nil
 }

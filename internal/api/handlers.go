@@ -454,6 +454,17 @@ return
 c.JSON(http.StatusOK, results)
 }
 
+// GetAssetProfile returns sector/industry/country info for a symbol from Yahoo Finance.
+func (h *Handlers) GetAssetProfile(c *gin.Context) {
+symbol := strings.ToUpper(c.Param("symbol"))
+profile, err := yahoo.GetAssetProfile(symbol)
+if err != nil {
+c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+return
+}
+c.JSON(http.StatusOK, profile)
+}
+
 // GetStockHistory returns OHLC + volume data for a symbol.
 // Query params: period (default "1y"), interval (default "1d")
 func (h *Handlers) GetStockHistory(c *gin.Context) {
@@ -550,38 +561,56 @@ return
 
 now := time.Now().UTC()
 
-// Collect holding names and quantity from portfolio
-accums, _, _, _, _, _ := buildHoldings(txns)
-holdingNames := map[string]string{}
-holdingQty   := map[string]float64{}
-for sym, a := range accums {
-if a.quantity > 0 {
-holdingNames[sym] = a.name
-holdingQty[sym]   = a.quantity
+// Find the oldest buy transaction date — dividends before this date are not relevant
+var oldestBuyDate time.Time
+for _, t := range txns {
+if t.Type == models.TypeBuy && (oldestBuyDate.IsZero() || t.Date.Before(oldestBuyDate)) {
+oldestBuyDate = t.Date
 }
 }
 
-// Collect paid dividends from our own transactions
+// Collect holding names, quantity, and currency from portfolio
+accums, _, _, _, _, _ := buildHoldings(txns)
+holdingNames    := map[string]string{}
+holdingQty      := map[string]float64{}
+holdingCurrency := map[string]string{}
+for sym, a := range accums {
+if a.quantity > 0 {
+holdingNames[sym]    = a.name
+holdingQty[sym]      = a.quantity
+holdingCurrency[sym] = a.currency
+}
+}
+
+// Collect paid dividends from our own transactions (month-level dedup key)
 type divKey struct{ sym, month string }
-paid := map[divKey]float64{}
+paid := map[divKey]bool{}
 for _, t := range txns {
 if t.Type == models.TypeDividend && t.Symbol != "" {
 k := divKey{t.Symbol, t.Date.Format("2006-01")}
-paid[k] += t.Amount
+paid[k] = true
 }
 }
 
 var entries []models.DividendCalendarEntry
 
-// Add our own historical dividend transactions as "paid"
+// Add our own historical dividend transactions as "paid" (has_transaction = true)
 for _, t := range txns {
 if t.Type != models.TypeDividend || t.Symbol == "" {
+continue
+}
+// Skip if before oldest buy date (data integrity guard)
+if !oldestBuyDate.IsZero() && t.Date.Before(oldestBuyDate) {
 continue
 }
 aps := 0.0
 qty := holdingQty[t.Symbol]
 if qty > 0 {
 aps = t.Amount / qty
+}
+cur := t.Currency
+if cur == "" {
+cur = holdingCurrency[t.Symbol]
 }
 entries = append(entries, models.DividendCalendarEntry{
 Date:           t.Date.UTC().Format("2006-01-02"),
@@ -592,6 +621,8 @@ TotalAmount:    t.Amount,
 Shares:         qty,
 EntryType:      "paid",
 Source:         "transaction",
+HasTransaction:  true,
+Currency:       cur,
 })
 }
 
@@ -605,14 +636,21 @@ divHistory, err := yahoo.GetDividendHistory(sym)
 if err != nil || len(divHistory) == 0 {
 continue
 }
+cur := holdingCurrency[sym]
 
 // Add historical Yahoo dividends not already covered by our transactions
 for _, ev := range divHistory {
 if ev.Date.After(now) {
 continue
 }
+// Skip events before oldest buy date
+if !oldestBuyDate.IsZero() && ev.Date.Before(oldestBuyDate) {
+continue
+}
 k := divKey{sym, ev.Date.Format("2006-01")}
-if _, exists := paid[k]; !exists {
+if paid[k] {
+continue // already have our own transaction
+}
 entries = append(entries, models.DividendCalendarEntry{
 Date:           ev.Date.Format("2006-01-02"),
 Symbol:         sym,
@@ -622,9 +660,10 @@ TotalAmount:    ev.Amount * qty,
 Shares:         qty,
 EntryType:      "paid",
 Source:         "yahoo",
+HasTransaction:  false,
+Currency:       cur,
 })
-paid[k] = ev.Amount * qty
-}
+paid[k] = true
 }
 
 // Forecast upcoming dividends
@@ -657,6 +696,8 @@ Shares:         qty,
 EntryType:      entryType,
 Frequency:      freqLabel(freq),
 Source:         "forecast",
+HasTransaction:  false,
+Currency:       cur,
 })
 forecasted++
 }

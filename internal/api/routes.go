@@ -29,6 +29,7 @@ api.POST("/transactions/import", h.ImportCSV)
 api.GET("/quote/:symbol", h.GetQuote)
 api.GET("/search", h.SearchSymbol)
 api.GET("/history/:symbol", h.GetStockHistory)
+api.GET("/asset-profile/:symbol", h.GetAssetProfile)
 
 // Dividend calendar
 api.GET("/dividend-calendar", h.GetDividendCalendar)

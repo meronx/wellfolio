@@ -17,6 +17,9 @@
     <div class="sidebar-logo">
       <i class="fa-solid fa-chart-line logo-icon"></i>
       <span class="logo-text">Wellfolio</span>
+      <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Collapse sidebar">
+        <i class="fa-solid fa-chevron-left" id="sidebarCollapseIcon"></i>
+      </button>
     </div>
     <nav class="sidebar-nav">
       <a href="#" class="nav-item active" data-page="dashboard">
@@ -33,6 +36,9 @@
       </a>
       <a href="#" class="nav-item" data-page="analytics">
         <i class="fa-solid fa-chart-bar"></i><span>Analytics</span>
+      </a>
+      <a href="#" class="nav-item" data-page="settings">
+        <i class="fa-solid fa-gear"></i><span>Settings</span>
       </a>
     </nav>
     <div class="sidebar-bottom">
@@ -150,13 +156,21 @@
       <section id="page-holdings" class="page">
         <div class="section-header">
           <h2>Current Holdings</h2>
-          <button class="btn btn-ghost btn-sm" id="refreshHoldings">
-            <i class="fa-solid fa-rotate"></i> Refresh Prices
-          </button>
+          <div class="filter-row">
+            <div class="search-wrapper search-compact" style="display:flex">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="holdingSearch" placeholder="Filter holdings…" autocomplete="off" />
+            </div>
+            <button class="btn btn-ghost btn-sm" id="refreshHoldings">
+              <i class="fa-solid fa-rotate"></i><span class="btn-label"> Refresh Prices</span>
+            </button>
+          </div>
         </div>
         <div id="holdingsTable" class="table-wrap">
           <div class="empty-state"><i class="fa-solid fa-briefcase"></i><p>No holdings yet</p></div>
         </div>
+        <!-- Holding detail panel (shown when a holding row is clicked) -->
+        <div id="holdingDetailPanel" class="holding-detail-panel hidden"></div>
         <div class="section-header mt-lg">
           <h2>Additional Info</h2>
         </div>
@@ -218,11 +232,46 @@
             <i class="fa-solid fa-rotate"></i> Refresh
           </button>
         </div>
+
+        <!-- Dividend metrics -->
+        <div class="metrics-grid" id="divMetrics">
+          <div class="metric-card">
+            <div class="metric-label"><i class="fa-solid fa-circle-dollar-to-slot metric-icon"></i>Total Dividends Received</div>
+            <div class="metric-value" id="dv-total">–</div>
+            <div class="metric-sub" id="dv-total-sub"></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label"><i class="fa-solid fa-percent metric-icon"></i>Dividend Yield on Cost</div>
+            <div class="metric-value positive" id="dv-yield">–</div>
+            <div class="metric-sub" id="dv-yield-sub">Total dividends / invested capital</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label"><i class="fa-solid fa-calendar-check metric-icon"></i>Personal Div. Yield p.a.</div>
+            <div class="metric-value positive" id="dv-pa">–</div>
+            <div class="metric-sub">Last 12 months / invested capital</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label"><i class="fa-solid fa-arrow-trend-up metric-icon"></i>Annual Forecast</div>
+            <div class="metric-value positive" id="dv-forecast">–</div>
+            <div class="metric-sub">Next 12 months (estimated)</div>
+          </div>
+        </div>
+
+        <!-- Annual dividend comparison -->
+        <div class="chart-card mb-lg" id="annualDivCard">
+          <div class="chart-card-header">
+            <span class="chart-card-title">Annual Dividends – Year over Year</span>
+          </div>
+          <div class="chart-wrap" style="height:200px">
+            <canvas id="annualDivChart"></canvas>
+          </div>
+        </div>
+
         <div class="calendar-legend">
-          <span class="cal-dot cal-paid"></span> Paid
+          <span class="cal-dot cal-paid"></span> Paid (recorded)
+          <span class="cal-dot cal-yahoo"></span> Paid (Yahoo Finance)
           <span class="cal-dot cal-upcoming"></span> Upcoming (est.)
           <span class="cal-dot cal-forecast"></span> Forecasted
-          <span class="cal-dot cal-yahoo"></span> Yahoo Finance Data
         </div>
         <div id="calendarContent" class="calendar-wrap">
           <div class="empty-state"><i class="fa-solid fa-calendar-days"></i><p>Loading dividend calendar…</p></div>
@@ -255,6 +304,29 @@
             </div>
           </div>
         </div>
+
+        <!-- Sector & Country allocation charts -->
+        <div class="charts-row charts-col">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span class="chart-card-title"><i class="fa-solid fa-industry" style="color:var(--primary)"></i> Sector Allocation</span>
+            </div>
+            <div class="chart-wrap" id="sectorChartWrap">
+              <canvas id="sectorChart"></canvas>
+            </div>
+            <div class="chart-status muted" id="sectorStatus" style="font-size:.8rem;padding:6px 0;text-align:center"></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span class="chart-card-title"><i class="fa-solid fa-earth-americas" style="color:var(--info)"></i> Country Allocation</span>
+            </div>
+            <div class="chart-wrap" id="countryChartWrap">
+              <canvas id="countryChart"></canvas>
+            </div>
+            <div class="chart-status muted" id="countryStatus" style="font-size:.8rem;padding:6px 0;text-align:center"></div>
+          </div>
+        </div>
+
         <div class="metrics-grid mt-lg" id="analyticsMetrics">
           <div class="metric-card">
             <div class="metric-label">Total Taxes Paid</div>
@@ -274,7 +346,84 @@
           </div>
         </div>
       </section>
-    </div>
+
+      <!-- ── SETTINGS ── -->
+      <section id="page-settings" class="page">
+        <div class="section-header">
+          <h2>Settings</h2>
+          <button class="btn btn-primary btn-sm" id="saveSettingsBtn">
+            <i class="fa-solid fa-floppy-disk"></i> Save Settings
+          </button>
+        </div>
+
+        <div class="settings-grid">
+          <!-- Display Currency -->
+          <div class="settings-card">
+            <div class="settings-card-title"><i class="fa-solid fa-coins"></i> Display Currency</div>
+            <p class="settings-desc">Default currency used when displaying portfolio values.</p>
+            <div class="form-group">
+              <label for="setCurrency">Currency</label>
+              <select id="setCurrency" class="select-sm" style="width:100%;max-width:240px">
+                <option value="USD">USD – US Dollar</option>
+                <option value="EUR">EUR – Euro</option>
+                <option value="GBP">GBP – British Pound</option>
+                <option value="CHF">CHF – Swiss Franc</option>
+                <option value="JPY">JPY – Japanese Yen</option>
+                <option value="CAD">CAD – Canadian Dollar</option>
+                <option value="AUD">AUD – Australian Dollar</option>
+                <option value="SEK">SEK – Swedish Krona</option>
+                <option value="NOK">NOK – Norwegian Krone</option>
+                <option value="DKK">DKK – Danish Krone</option>
+                <option value="HKD">HKD – Hong Kong Dollar</option>
+                <option value="SGD">SGD – Singapore Dollar</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Language / Locale -->
+          <div class="settings-card">
+            <div class="settings-card-title"><i class="fa-solid fa-language"></i> Language &amp; Format</div>
+            <p class="settings-desc">Controls date and number formatting throughout the app.</p>
+            <div class="form-group">
+              <label for="setLocale">Language / Region</label>
+              <select id="setLocale" class="select-sm" style="width:100%;max-width:240px">
+                <option value="en-US">English (US) – MM/DD/YYYY, $1,234.56</option>
+                <option value="en-GB">English (UK) – DD/MM/YYYY, £1,234.56</option>
+                <option value="de-DE">Deutsch – DD.MM.YYYY, 1.234,56 €</option>
+                <option value="fr-FR">Français – DD/MM/YYYY, 1 234,56 €</option>
+                <option value="es-ES">Español – DD/MM/YYYY, 1.234,56 €</option>
+                <option value="it-IT">Italiano – DD/MM/YYYY, 1.234,56 €</option>
+                <option value="nl-NL">Nederlands – DD-MM-YYYY, € 1.234,56</option>
+                <option value="pt-BR">Português (BR) – DD/MM/YYYY, R$ 1.234,56</option>
+                <option value="ja-JP">日本語 – YYYY/MM/DD, ¥1,234</option>
+                <option value="zh-CN">中文 – YYYY/MM/DD, ¥1,234.56</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Date Format Preview -->
+          <div class="settings-card">
+            <div class="settings-card-title"><i class="fa-solid fa-calendar"></i> Format Preview</div>
+            <p class="settings-desc">How dates and numbers will appear in the app.</p>
+            <div class="settings-preview" id="settingsPreview"></div>
+          </div>
+
+          <!-- Sidebar behavior -->
+          <div class="settings-card">
+            <div class="settings-card-title"><i class="fa-solid fa-sidebar"></i> Sidebar</div>
+            <p class="settings-desc">Keep sidebar collapsed by default (icon-only mode).</p>
+            <div class="settings-toggle-row">
+              <label class="toggle-label" for="setCollapsedDefault">Collapsed by default</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="setCollapsedDefault" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- end .page-content -->
   </main>
 
   <!-- ── TRANSACTION MODAL ── -->

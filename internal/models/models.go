@@ -124,7 +124,19 @@ type DividendCalendarEntry struct {
 	AmountPerShare  float64 `json:"amount_per_share"`
 	TotalAmount     float64 `json:"total_amount"`
 	Shares          float64 `json:"shares"`
-	EntryType       string  `json:"entry_type"` // "paid", "upcoming", "forecast"
-	Frequency       string  `json:"frequency"`  // "monthly","quarterly","semi-annual","annual"
-	Source          string  `json:"source"`     // "transaction", "yahoo"
+	EntryType       string  `json:"entry_type"`    // "paid", "upcoming", "forecast"
+	Frequency       string  `json:"frequency"`     // "monthly","quarterly","semi-annual","annual"
+	Source          string  `json:"source"`        // "transaction", "yahoo", "forecast"
+	HasTransaction  bool    `json:"has_transaction"` // true if backed by our own transaction record
+	Currency        string  `json:"currency"`
+}
+
+// AssetProfile holds sector/industry/country data from Yahoo Finance
+type AssetProfile struct {
+	Symbol      string `json:"symbol"`
+	Sector      string `json:"sector"`
+	Industry    string `json:"industry"`
+	Country     string `json:"country"`
+	Website     string `json:"website"`
+	Description string `json:"description"`
 }
