@@ -105,3 +105,26 @@ type TimeSeriesPoint struct {
 	Date  string  `json:"date"`
 	Value float64 `json:"value"`
 }
+
+// OHLCPoint is one candle / daily bar for a stock price chart
+type OHLCPoint struct {
+	Date   string  `json:"date"`
+	Open   float64 `json:"open"`
+	High   float64 `json:"high"`
+	Low    float64 `json:"low"`
+	Close  float64 `json:"close"`
+	Volume int64   `json:"volume"`
+}
+
+// DividendCalendarEntry is one event in the dividend calendar
+type DividendCalendarEntry struct {
+	Date            string  `json:"date"`
+	Symbol          string  `json:"symbol"`
+	Name            string  `json:"name"`
+	AmountPerShare  float64 `json:"amount_per_share"`
+	TotalAmount     float64 `json:"total_amount"`
+	Shares          float64 `json:"shares"`
+	EntryType       string  `json:"entry_type"` // "paid", "upcoming", "forecast"
+	Frequency       string  `json:"frequency"`  // "monthly","quarterly","semi-annual","annual"
+	Source          string  `json:"source"`     // "transaction", "yahoo"
+}
