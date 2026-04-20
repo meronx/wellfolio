@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wellfolio – Investment Tracker</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="stylesheet" href="/static/css/fontawesome.min.css" />
+  <script src="/static/js/chart.umd.js"></script>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <i class="fa-solid fa-chart-line logo-icon"></i>
+      <span class="logo-text">Wellfolio</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="dashboard">
+        <i class="fa-solid fa-gauge-high"></i><span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-page="holdings">
+        <i class="fa-solid fa-briefcase"></i><span>Holdings</span>
+      </a>
+      <a href="#" class="nav-item" data-page="transactions">
+        <i class="fa-solid fa-list-ul"></i><span>Transactions</span>
+      </a>
+      <a href="#" class="nav-item" data-page="analytics">
+        <i class="fa-solid fa-chart-bar"></i><span>Analytics</span>
+      </a>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+        <i class="fa-solid fa-moon" id="themeIcon"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main">
+    <!-- Header -->
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn"><i class="fa-solid fa-bars"></i></button>
+      <div class="topbar-title" id="pageTitle">Dashboard</div>
+      <div class="topbar-actions">
+        <div class="search-wrapper">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="stockSearch" placeholder="Search symbol…" autocomplete="off" />
+          <ul id="searchResults" class="search-dropdown hidden"></ul>
+        </div>
+        <button class="btn btn-primary" id="addTxnBtn">
+          <i class="fa-solid fa-plus"></i> Add Transaction
+        </button>
+      </div>
+    </header>
+
+    <!-- Pages -->
+    <div class="page-content">
+
+      <!-- ── DASHBOARD ── -->
+      <section id="page-dashboard" class="page active">
+        <div class="metrics-grid">
+          <div class="metric-card" id="mc-total">
+            <div class="metric-label">Total Portfolio Value</div>
+            <div class="metric-value" id="mv-total">–</div>
+            <div class="metric-sub" id="ms-total"></div>
+          </div>
+          <div class="metric-card" id="mc-unrealized">
+            <div class="metric-label">Unrealized Gain / Loss</div>
+            <div class="metric-value" id="mv-unrealized">–</div>
+            <div class="metric-sub" id="ms-unrealized"></div>
+          </div>
+          <div class="metric-card" id="mc-day">
+            <div class="metric-label">Day Change</div>
+            <div class="metric-value" id="mv-day">–</div>
+            <div class="metric-sub" id="ms-day"></div>
+          </div>
+          <div class="metric-card" id="mc-cash">
+            <div class="metric-label">Cash Balance</div>
+            <div class="metric-value" id="mv-cash">–</div>
+            <div class="metric-sub" id="ms-cash">Available</div>
+          </div>
+        </div>
+
+        <div class="charts-row">
+          <div class="chart-card chart-allocation">
+            <div class="chart-card-header">
+              <span class="chart-card-title">Portfolio Allocation</span>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="allocationChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card chart-performance">
+            <div class="chart-card-header">
+              <span class="chart-card-title">Invested Capital Over Time</span>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="performanceChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <h2>Recent Transactions</h2>
+          <a href="#" class="link" data-page="transactions">View all</a>
+        </div>
+        <div id="recentTxns" class="txn-table-wrap">
+          <div class="empty-state"><i class="fa-solid fa-receipt"></i><p>No transactions yet</p></div>
+        </div>
+      </section>
+
+      <!-- ── HOLDINGS ── -->
+      <section id="page-holdings" class="page">
+        <div class="section-header">
+          <h2>Current Holdings</h2>
+          <button class="btn btn-ghost btn-sm" id="refreshHoldings">
+            <i class="fa-solid fa-rotate"></i> Refresh Prices
+          </button>
+        </div>
+        <div id="holdingsTable" class="table-wrap">
+          <div class="empty-state"><i class="fa-solid fa-briefcase"></i><p>No holdings yet</p></div>
+        </div>
+        <div class="section-header mt-lg">
+          <h2>Additional Info</h2>
+        </div>
+        <div class="metrics-grid" id="extraMetrics">
+          <div class="metric-card">
+            <div class="metric-label">Realized Gain / Loss</div>
+            <div class="metric-value" id="mv-realized">–</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Total Dividends</div>
+            <div class="metric-value" id="mv-dividends">–</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Interest Earned</div>
+            <div class="metric-value" id="mv-interest">–</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Total Fees</div>
+            <div class="metric-value" id="mv-fees">–</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── TRANSACTIONS ── -->
+      <section id="page-transactions" class="page">
+        <div class="section-header">
+          <h2>Transaction History</h2>
+          <div class="filter-row">
+            <select id="filterType" class="select-sm">
+              <option value="">All types</option>
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
+              <option value="split">Split</option>
+              <option value="dividend">Dividend</option>
+              <option value="interest_earning">Interest</option>
+              <option value="tax">Tax</option>
+              <option value="withdrawal">Withdrawal</option>
+              <option value="deposit">Deposit</option>
+            </select>
+          </div>
+        </div>
+        <div id="transactionsTable" class="table-wrap">
+          <div class="empty-state"><i class="fa-solid fa-list-ul"></i><p>No transactions yet</p></div>
+        </div>
+      </section>
+
+      <!-- ── ANALYTICS ── -->
+      <section id="page-analytics" class="page">
+        <div class="charts-row charts-col">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span class="chart-card-title">Monthly Dividends</span>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="dividendsChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span class="chart-card-title">Transaction Type Breakdown</span>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="typeChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="metrics-grid mt-lg" id="analyticsMetrics">
+          <div class="metric-card">
+            <div class="metric-label">Total Taxes Paid</div>
+            <div class="metric-value" id="mv-taxes">–</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Net Income (Div + Int)</div>
+            <div class="metric-value" id="mv-income">–</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Total Deposited</div>
+            <div class="metric-value" id="mv-deposited">–</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Total Withdrawn</div>
+            <div class="metric-value" id="mv-withdrawn">–</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ── TRANSACTION MODAL ── -->
+  <div class="modal-overlay hidden" id="modalOverlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add Transaction</h3>
+        <button class="modal-close" id="modalClose"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="txnForm" class="modal-body">
+        <input type="hidden" id="txnId" />
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="txnType">Type *</label>
+            <select id="txnType" required>
+              <option value="">Select type</option>
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
+              <option value="split">Split</option>
+              <option value="dividend">Dividend</option>
+              <option value="interest_earning">Interest Earning</option>
+              <option value="tax">Tax</option>
+              <option value="withdrawal">Withdrawal</option>
+              <option value="deposit">Deposit</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="txnDate">Date *</label>
+            <input type="date" id="txnDate" required />
+          </div>
+        </div>
+
+        <div class="form-row" id="symbolRow">
+          <div class="form-group">
+            <label for="txnSymbol">Symbol</label>
+            <div class="symbol-input-wrap">
+              <input type="text" id="txnSymbol" placeholder="e.g. AAPL" autocomplete="off"
+                     style="text-transform:uppercase" />
+              <ul id="modalSearchResults" class="search-dropdown hidden"></ul>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="txnName">Name</label>
+            <input type="text" id="txnName" placeholder="Company name" />
+          </div>
+        </div>
+
+        <div class="form-row" id="qtyPriceRow">
+          <div class="form-group" id="qtyGroup">
+            <label for="txnQty" id="qtyLabel">Quantity</label>
+            <input type="number" id="txnQty" min="0" step="any" placeholder="0" />
+          </div>
+          <div class="form-group" id="priceGroup">
+            <label for="txnPrice">Price per Share</label>
+            <input type="number" id="txnPrice" min="0" step="any" placeholder="0.00" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" id="amountGroup">
+            <label for="txnAmount" id="amountLabel">Amount</label>
+            <input type="number" id="txnAmount" min="0" step="any" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label for="txnFees">Fees / Commission</label>
+            <input type="number" id="txnFees" min="0" step="any" placeholder="0.00" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="txnCurrency">Currency</label>
+            <select id="txnCurrency">
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+              <option value="CHF">CHF</option>
+              <option value="JPY">JPY</option>
+              <option value="CAD">CAD</option>
+              <option value="AUD">AUD</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="txnNotes">Notes</label>
+            <input type="text" id="txnNotes" placeholder="Optional notes" />
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="cancelBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveBtn">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast notifications -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
