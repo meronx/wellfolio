@@ -13,9 +13,11 @@ import (
 )
 
 const (
-chartURL  = "https://query1.finance.yahoo.com/v8/finance/chart/%s?range=1d&interval=1d"
-searchURL = "https://query2.finance.yahoo.com/v1/finance/search?q=%s&quotesCount=10&newsCount=0"
-histURL   = "https://query2.finance.yahoo.com/v8/finance/chart/%s?range=%s&interval=%s&events=div&includeAdjustedClose=true"
+chartURL            = "https://query1.finance.yahoo.com/v8/finance/chart/%s?range=1d&interval=1d"
+searchURL           = "https://query2.finance.yahoo.com/v1/finance/search?q=%s&quotesCount=10&newsCount=0"
+histURL             = "https://query2.finance.yahoo.com/v8/finance/chart/%s?range=%s&interval=%s&events=div&includeAdjustedClose=true"
+divHistoryPeriod    = "5y"
+divHistoryInterval  = "1mo"
 )
 
 var httpClient = &http.Client{Timeout: 15 * time.Second}
@@ -227,7 +229,7 @@ Amount float64
 
 // GetDividendHistory fetches historical dividend events from Yahoo Finance for a symbol.
 func GetDividendHistory(symbol string) ([]YahooDividendEvent, error) {
-rawURL := fmt.Sprintf(histURL, url.PathEscape(symbol), "5y", "1mo")
+rawURL := fmt.Sprintf(histURL, url.PathEscape(symbol), divHistoryPeriod, divHistoryInterval)
 body, err := doGet(rawURL)
 if err != nil {
 return nil, err

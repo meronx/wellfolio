@@ -50,6 +50,15 @@ function fmtVolume(v) {
   return String(v);
 }
 
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /* ══════════════════════════════════════════════════════════════
    Chart.js helpers
 ══════════════════════════════════════════════════════════════ */
@@ -253,7 +262,7 @@ async function loadStockChart(symbol, period) {
   state.stockChart.period = period;
 
   const infoEl = document.getElementById('stockChartInfo');
-  infoEl.innerHTML = `<span class="muted">Loading ${symbol}…</span>`;
+  infoEl.innerHTML = `<span class="muted">Loading ${escHtml(symbol)}…</span>`;
 
   try {
     const [points, quote] = await Promise.all([
@@ -262,7 +271,7 @@ async function loadStockChart(symbol, period) {
     ]);
 
     if (!points || points.length === 0) {
-      infoEl.innerHTML = `<span class="muted">No data for ${symbol}</span>`;
+      infoEl.innerHTML = `<span class="muted">No data for ${escHtml(symbol)}</span>`;
       return;
     }
 
@@ -270,7 +279,7 @@ async function loadStockChart(symbol, period) {
     if (quote) {
       const chgCls = quote.change_pct >= 0 ? 'positive' : 'negative';
       infoEl.innerHTML = `
-        <div class="stock-info-item"><div class="stock-info-label">Symbol</div><div class="stock-info-value">${quote.symbol}</div></div>
+        <div class="stock-info-item"><div class="stock-info-label">Symbol</div><div class="stock-info-value">${escHtml(quote.symbol)}</div></div>
         <div class="stock-info-item"><div class="stock-info-label">Price</div><div class="stock-info-value">${fmtMoney(quote.price, quote.currency)}</div></div>
         <div class="stock-info-item"><div class="stock-info-label">Change</div><div class="stock-info-value ${chgCls}">${fmtPct(quote.change_pct)}</div></div>
         <div class="stock-info-item"><div class="stock-info-label">Vol</div><div class="stock-info-value">${fmtVolume(quote.volume)}</div></div>
@@ -278,7 +287,7 @@ async function loadStockChart(symbol, period) {
         <div class="stock-info-item"><div class="stock-info-label">52W L</div><div class="stock-info-value">${fmtMoney(quote.fifty_two_week_low, quote.currency)}</div></div>
       `;
     } else {
-      infoEl.innerHTML = `<span class="muted">${symbol}</span>`;
+      infoEl.innerHTML = `<span class="muted">${escHtml(symbol)}</span>`;
     }
 
     const labels  = points.map(p => p.date);
