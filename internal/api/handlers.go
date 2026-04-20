@@ -2,7 +2,9 @@ package api
 
 import (
 "encoding/csv"
+"encoding/json"
 "fmt"
+"io"
 "math"
 "net/http"
 "sort"
@@ -23,6 +25,68 @@ db *gorm.DB
 
 func NewHandlers(db *gorm.DB) *Handlers {
 return &Handlers{db: db}
+}
+
+// txnPayload is a wire-format struct that accepts dates as plain "YYYY-MM-DD" strings
+// so that we avoid time.Time's strict RFC3339-only JSON unmarshalling.
+type txnPayload struct {
+ID          uint    `json:"id"`
+PortfolioID uint    `json:"portfolio_id"`
+Date        string  `json:"date"`
+Type        string  `json:"type"`
+Symbol      string  `json:"symbol"`
+Name        string  `json:"name"`
+Quantity    float64 `json:"quantity"`
+Price       float64 `json:"price"`
+Fees        float64 `json:"fees"`
+Amount      float64 `json:"amount"`
+Currency    string  `json:"currency"`
+Notes       string  `json:"notes"`
+}
+
+// parseFlexDate accepts "YYYY-MM-DD", RFC3339, or "YYYY-MM-DDTHH:MM:SSZ".
+func parseFlexDate(s string) (time.Time, error) {
+for _, layout := range []string{"2006-01-02", time.RFC3339, "2006-01-02T15:04:05Z"} {
+if t, err := time.Parse(layout, s); err == nil {
+// Normalise date-only values to noon UTC so they survive TZ conversions.
+if layout == "2006-01-02" {
+return time.Date(t.Year(), t.Month(), t.Day(), 12, 0, 0, 0, time.UTC), nil
+}
+return t, nil
+}
+}
+return time.Time{}, fmt.Errorf("unsupported date format: %q", s)
+}
+
+// bindTxnPayload reads the request body and returns a populated models.Transaction.
+func bindTxnPayload(c *gin.Context) (models.Transaction, error) {
+body, err := io.ReadAll(c.Request.Body)
+if err != nil {
+return models.Transaction{}, err
+}
+var p txnPayload
+if err := json.Unmarshal(body, &p); err != nil {
+return models.Transaction{}, err
+}
+txn := models.Transaction{
+ID:          p.ID,
+PortfolioID: p.PortfolioID,
+Type:        p.Type,
+Symbol:      p.Symbol,
+Name:        p.Name,
+Quantity:    p.Quantity,
+Price:       p.Price,
+Fees:        p.Fees,
+Amount:      p.Amount,
+Currency:    p.Currency,
+Notes:       p.Notes,
+}
+if p.Date != "" {
+if t, err := parseFlexDate(p.Date); err == nil {
+txn.Date = t
+}
+}
+return txn, nil
 }
 
 // portfolioID extracts the portfolio_id from query params, defaulting to 1.
@@ -156,8 +220,8 @@ c.JSON(http.StatusOK, txns)
 }
 
 func (h *Handlers) CreateTransaction(c *gin.Context) {
-var txn models.Transaction
-if err := c.ShouldBindJSON(&txn); err != nil {
+txn, err := bindTxnPayload(c)
+if err != nil {
 c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 return
 }
@@ -189,18 +253,27 @@ c.JSON(http.StatusNotFound, gin.H{"error": "transaction not found"})
 return
 }
 
-if err := c.ShouldBindJSON(&existing); err != nil {
+updated, err := bindTxnPayload(c)
+if err != nil {
 c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 return
 }
-existing.ID = uint(id)
-existing.Symbol = strings.ToUpper(existing.Symbol)
+updated.ID = uint(id)
+// Preserve portfolio association
+if updated.PortfolioID == 0 {
+updated.PortfolioID = existing.PortfolioID
+}
+updated.Symbol = strings.ToUpper(updated.Symbol)
+// Keep original date if not supplied
+if updated.Date.IsZero() {
+updated.Date = existing.Date
+}
 
-if err := h.db.Save(&existing).Error; err != nil {
+if err := h.db.Save(&updated).Error; err != nil {
 c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 return
 }
-c.JSON(http.StatusOK, existing)
+c.JSON(http.StatusOK, updated)
 }
 
 func (h *Handlers) DeleteTransaction(c *gin.Context) {

@@ -21,6 +21,7 @@
   --info-dim:     rgba(56,139,253,.15);
   --sidebar-w:    240px;
   --sidebar-collapsed-w: 56px;
+  --topbar-h:     60px;
   --radius:       10px;
   --shadow:       0 4px 24px rgba(0,0,0,.4);
   --font:         'Inter', 'Segoe UI', system-ui, sans-serif;
@@ -112,7 +113,8 @@ body.sidebar-collapsed .main { margin-left: 56px; }
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 10px 12px;
+  height: var(--topbar-h);
+  padding: 0 12px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -182,7 +184,8 @@ body.sidebar-collapsed .sidebar-version { display: none; }
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 24px;
+  padding: 0 24px;
+  height: var(--topbar-h);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
