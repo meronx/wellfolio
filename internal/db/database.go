@@ -15,7 +15,7 @@ import (
 func Initialize() (*gorm.DB, error) {
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
-		dbPath = "wellfolio.db"
+		dbPath = "/data/wellfolio.db"
 	}
 
 	// Ensure parent directory exists

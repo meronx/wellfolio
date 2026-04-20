@@ -1984,13 +1984,13 @@ function openEditModal(id) {
   const cur = document.getElementById('txnCurrency');
   const notes = document.getElementById('txnNotes');
   const split = document.getElementById('txnSplitRatio');
-  if (qty) qty.value = tx.quantity || '';
+  if (qty) qty.value = tx.type !== 'split' ? (tx.quantity || '') : '';
   if (price) price.value = tx.price || '';
   if (amount) amount.value = tx.amount || '';
   if (fees) fees.value = tx.fees || '';
   if (cur) cur.value = tx.currency || settings.currency;
   if (notes) notes.value = tx.notes || '';
-  if (split) split.value = tx.splitRatio || '';
+  if (split) split.value = tx.type === 'split' ? (tx.quantity || '') : '';
   document.getElementById('txnModal')?.classList.remove('hidden');
 }
 
@@ -2025,14 +2025,15 @@ async function submitTxnForm(e) {
     date: f.txnDate.value,
     symbol: f.txnSymbol?.value.toUpperCase() || '',
     name: f.txnName?.value || '',
-    quantity: parseFloat(document.getElementById('txnQuantity')?.value) || 0,
+    quantity: type === 'split'
+      ? (parseFloat(document.getElementById('txnSplitRatio')?.value) || 0)
+      : (parseFloat(document.getElementById('txnQuantity')?.value) || 0),
     price: parseFloat(document.getElementById('txnPrice')?.value) || 0,
     amount: parseFloat(document.getElementById('txnAmount')?.value) || parseFloat(document.getElementById('txnDivAmount')?.value) || 0,
     fees: parseFloat(document.getElementById('txnFees')?.value) || 0,
     currency: document.getElementById('txnCurrency')?.value || settings.currency,
     notes: document.getElementById('txnNotes')?.value || '',
-    splitRatio: parseFloat(document.getElementById('txnSplitRatio')?.value) || 0,
-    portfolioId: pid(),
+    portfolio_id: pid(),
   };
 
   try {

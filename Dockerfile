@@ -23,6 +23,8 @@ COPY --from=builder /app/wellfolio /wellfolio
 
 EXPOSE 8080
 
+VOLUME /data
+
 ENV GIN_MODE=release
 ENV PORT=8080
 
