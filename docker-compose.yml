@@ -1,0 +1,23 @@
+services:
+  wellfolio:
+    build: .
+    container_name: wellfolio
+    ports:
+      - "8080:8080"
+    volumes:
+      - wellfolio-data:/data
+    environment:
+      - DB_PATH=/data/wellfolio.db
+      - GIN_MODE=release
+      - PORT=8080
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/portfolio > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  wellfolio-data:
+    driver: local
