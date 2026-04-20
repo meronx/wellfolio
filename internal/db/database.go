@@ -38,8 +38,15 @@ func Initialize() (*gorm.DB, error) {
 	}
 
 	// Auto-migrate schema
-	if err := db.AutoMigrate(&models.Transaction{}); err != nil {
+	if err := db.AutoMigrate(&models.PortfolioModel{}, &models.AppSetting{}, &models.Transaction{}); err != nil {
 		return nil, err
+	}
+
+	// Seed the default portfolio (ID=1) if none exist
+	var count int64
+	db.Model(&models.PortfolioModel{}).Count(&count)
+	if count == 0 {
+		db.Create(&models.PortfolioModel{Name: "Default"})
 	}
 
 	log.Printf("Database initialized at %s", dbPath)

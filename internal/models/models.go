@@ -14,21 +14,36 @@ const (
 	TypeDeposit         = "deposit"
 )
 
-// Transaction represents a financial transaction
-type Transaction struct {
+// PortfolioModel represents a named investment portfolio stored in the DB.
+type PortfolioModel struct {
 	ID        uint      `json:"id"         gorm:"primaryKey;autoIncrement"`
-	Date      time.Time `json:"date"`
-	Type      string    `json:"type"       gorm:"not null"`
-	Symbol    string    `json:"symbol"`
-	Name      string    `json:"name"`
-	Quantity  float64   `json:"quantity"`
-	Price     float64   `json:"price"`
-	Fees      float64   `json:"fees"`
-	Amount    float64   `json:"amount"`
-	Currency  string    `json:"currency"   gorm:"default:'USD'"`
-	Notes     string    `json:"notes"`
+	Name      string    `json:"name"       gorm:"not null"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// AppSetting is a simple key-value store for server-side persisted settings.
+type AppSetting struct {
+	Key   string `json:"key"   gorm:"primaryKey"`
+	Value string `json:"value"`
+}
+
+// Transaction represents a financial transaction
+type Transaction struct {
+	ID          uint      `json:"id"           gorm:"primaryKey;autoIncrement"`
+	PortfolioID uint      `json:"portfolio_id" gorm:"not null;default:1;index"`
+	Date        time.Time `json:"date"`
+	Type        string    `json:"type"         gorm:"not null"`
+	Symbol      string    `json:"symbol"`
+	Name        string    `json:"name"`
+	Quantity    float64   `json:"quantity"`
+	Price       float64   `json:"price"`
+	Fees        float64   `json:"fees"`
+	Amount      float64   `json:"amount"`
+	Currency    string    `json:"currency"     gorm:"default:'USD'"`
+	Notes       string    `json:"notes"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // Holding represents the current state of a single stock position
@@ -57,19 +72,21 @@ type Holding struct {
 
 // Portfolio is the aggregated view of all holdings and cash
 type Portfolio struct {
-	Holdings         []Holding `json:"holdings"`
-	TotalValue       float64   `json:"total_value"`
-	TotalCost        float64   `json:"total_cost"`
+	Holdings               []Holding `json:"holdings"`
+	TotalValue             float64   `json:"total_value"`
+	TotalCost              float64   `json:"total_cost"`
 	TotalUnrealizedGain    float64   `json:"total_unrealized_gain"`
 	TotalUnrealizedGainPct float64   `json:"total_unrealized_gain_pct"`
-	TotalRealizedGain float64  `json:"total_realized_gain"`
-	TotalDividends   float64   `json:"total_dividends"`
-	TotalInterest    float64   `json:"total_interest"`
-	TotalFees        float64   `json:"total_fees"`
-	TotalTaxes       float64   `json:"total_taxes"`
-	CashBalance      float64   `json:"cash_balance"`
-	DayChange        float64   `json:"day_change"`
-	DayChangePct     float64   `json:"day_change_pct"`
+	TotalRealizedGain      float64   `json:"total_realized_gain"`
+	TotalDividends         float64   `json:"total_dividends"`
+	TotalInterest          float64   `json:"total_interest"`
+	TotalFees              float64   `json:"total_fees"`
+	TotalTaxes             float64   `json:"total_taxes"`
+	TotalDeposited         float64   `json:"total_deposited"`
+	TotalWithdrawn         float64   `json:"total_withdrawn"`
+	CashBalance            float64   `json:"cash_balance"`
+	DayChange              float64   `json:"day_change"`
+	DayChangePct           float64   `json:"day_change_pct"`
 }
 
 // Quote is a real-time price quote from Yahoo Finance

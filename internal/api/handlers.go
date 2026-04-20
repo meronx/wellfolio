@@ -25,13 +25,121 @@ func NewHandlers(db *gorm.DB) *Handlers {
 return &Handlers{db: db}
 }
 
+// portfolioID extracts the portfolio_id from query params, defaulting to 1.
+func portfolioID(c *gin.Context) uint {
+if raw := c.Query("portfolio_id"); raw != "" {
+if id, err := strconv.Atoi(raw); err == nil && id > 0 {
+return uint(id)
+}
+}
+return 1
+}
+
+// ──────────────────────────────────────────────────────────────
+// Portfolio Management
+// ──────────────────────────────────────────────────────────────
+
+func (h *Handlers) ListPortfolios(c *gin.Context) {
+var portfolios []models.PortfolioModel
+if err := h.db.Order("id asc").Find(&portfolios).Error; err != nil {
+c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+return
+}
+c.JSON(http.StatusOK, portfolios)
+}
+
+func (h *Handlers) CreatePortfolio(c *gin.Context) {
+var body struct {
+Name string `json:"name"`
+}
+if err := c.ShouldBindJSON(&body); err != nil || strings.TrimSpace(body.Name) == "" {
+c.JSON(http.StatusBadRequest, gin.H{"error": "name required"})
+return
+}
+p := models.PortfolioModel{Name: strings.TrimSpace(body.Name)}
+if err := h.db.Create(&p).Error; err != nil {
+c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+return
+}
+c.JSON(http.StatusCreated, p)
+}
+
+func (h *Handlers) UpdatePortfolio(c *gin.Context) {
+id, err := strconv.Atoi(c.Param("id"))
+if err != nil {
+c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+return
+}
+var body struct {
+Name string `json:"name"`
+}
+if err := c.ShouldBindJSON(&body); err != nil || strings.TrimSpace(body.Name) == "" {
+c.JSON(http.StatusBadRequest, gin.H{"error": "name required"})
+return
+}
+if err := h.db.Model(&models.PortfolioModel{}).Where("id = ?", id).Update("name", strings.TrimSpace(body.Name)).Error; err != nil {
+c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+return
+}
+var p models.PortfolioModel
+h.db.First(&p, id)
+c.JSON(http.StatusOK, p)
+}
+
+func (h *Handlers) DeletePortfolio(c *gin.Context) {
+id, err := strconv.Atoi(c.Param("id"))
+if err != nil {
+c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+return
+}
+var count int64
+h.db.Model(&models.PortfolioModel{}).Count(&count)
+if count <= 1 {
+c.JSON(http.StatusBadRequest, gin.H{"error": "cannot delete the last portfolio"})
+return
+}
+h.db.Where("portfolio_id = ?", id).Delete(&models.Transaction{})
+if err := h.db.Delete(&models.PortfolioModel{}, id).Error; err != nil {
+c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+return
+}
+c.JSON(http.StatusOK, gin.H{"message": "deleted"})
+}
+
+// ──────────────────────────────────────────────────────────────
+// App Settings (persisted in docker volume via DB)
+// ──────────────────────────────────────────────────────────────
+
+func (h *Handlers) GetSettings(c *gin.Context) {
+var rows []models.AppSetting
+h.db.Find(&rows)
+result := map[string]string{}
+for _, s := range rows {
+result[s.Key] = s.Value
+}
+c.JSON(http.StatusOK, result)
+}
+
+func (h *Handlers) UpdateSettings(c *gin.Context) {
+var body map[string]interface{}
+if err := c.ShouldBindJSON(&body); err != nil {
+c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+return
+}
+for k, v := range body {
+h.db.Save(&models.AppSetting{Key: k, Value: fmt.Sprintf("%v", v)})
+}
+c.JSON(http.StatusOK, body)
+}
+
 // ──────────────────────────────────────────────────────────────
 // Transactions CRUD
 // ──────────────────────────────────────────────────────────────
 
 func (h *Handlers) ListTransactions(c *gin.Context) {
 var txns []models.Transaction
-q := h.db.Order("date desc, id desc")
+pid := portfolioID(c)
+q := h.db.Where("portfolio_id = ?", pid).Order("date desc, id desc")
 
 if sym := c.Query("symbol"); sym != "" {
 q = q.Where("symbol = ?", strings.ToUpper(sym))
@@ -56,6 +164,9 @@ return
 txn.Symbol = strings.ToUpper(txn.Symbol)
 if txn.Date.IsZero() {
 txn.Date = time.Now()
+}
+if txn.PortfolioID == 0 {
+txn.PortfolioID = portfolioID(c)
 }
 
 if err := h.db.Create(&txn).Error; err != nil {
@@ -99,6 +210,7 @@ c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 return
 }
 
+
 if err := h.db.Delete(&models.Transaction{}, id).Error; err != nil {
 c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 return
@@ -114,7 +226,8 @@ var csvHeader = []string{"date", "type", "symbol", "name", "quantity", "price", 
 
 func (h *Handlers) ExportCSV(c *gin.Context) {
 var txns []models.Transaction
-if err := h.db.Order("date asc, id asc").Find(&txns).Error; err != nil {
+pid := portfolioID(c)
+if err := h.db.Where("portfolio_id = ?", pid).Order("date asc, id asc").Find(&txns).Error; err != nil {
 c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 return
 }
@@ -142,6 +255,7 @@ w.Flush()
 }
 
 func (h *Handlers) ImportCSV(c *gin.Context) {
+pid := portfolioID(c)
 file, _, err := c.Request.FormFile("file")
 if err != nil {
 c.JSON(http.StatusBadRequest, gin.H{"error": "file field required"})
@@ -208,16 +322,17 @@ currency = "USD"
 }
 
 txn := models.Transaction{
-Date:     date,
-Type:     txnType,
-Symbol:   symbol,
-Name:     name,
-Quantity: qty,
-Price:    price,
-Amount:   amount,
-Fees:     fees,
-Currency: currency,
-Notes:    notes,
+PortfolioID: pid,
+Date:        date,
+Type:        txnType,
+Symbol:      symbol,
+Name:        name,
+Quantity:    qty,
+Price:       price,
+Amount:      amount,
+Fees:        fees,
+Currency:    currency,
+Notes:       notes,
 }
 if err := h.db.Create(&txn).Error; err == nil {
 imported++
@@ -255,9 +370,8 @@ m[symbol] = a
 return a
 }
 
-func buildHoldings(txns []models.Transaction) (map[string]*holdingAccum, float64, float64, float64, float64, float64) {
-accums := map[string]*holdingAccum{}
-var cashBalance, totalInterest, totalTaxes, totalFees float64
+func buildHoldings(txns []models.Transaction) (accums map[string]*holdingAccum, cashBalance, totalInterest, totalTaxes, totalFees, totalDeposited, totalWithdrawn float64) {
+accums = map[string]*holdingAccum{}
 
 sort.Slice(txns, func(i, j int) bool {
 return txns[i].Date.Before(txns[j].Date)
@@ -269,9 +383,11 @@ totalFees += t.Fees
 switch t.Type {
 case models.TypeDeposit:
 cashBalance += t.Amount
+totalDeposited += t.Amount
 
 case models.TypeWithdrawal:
 cashBalance -= t.Amount
+totalWithdrawn += t.Amount
 
 case models.TypeInterestEarning:
 cashBalance += t.Amount
@@ -322,17 +438,18 @@ cashBalance += t.Amount
 }
 }
 
-return accums, cashBalance, totalInterest, totalTaxes, totalFees, 0
+return
 }
 
 func (h *Handlers) GetPortfolio(c *gin.Context) {
 var txns []models.Transaction
-if err := h.db.Find(&txns).Error; err != nil {
+pid := portfolioID(c)
+if err := h.db.Where("portfolio_id = ?", pid).Find(&txns).Error; err != nil {
 c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 return
 }
 
-accums, cashBalance, totalInterest, totalTaxes, totalFees, _ := buildHoldings(txns)
+accums, cashBalance, totalInterest, totalTaxes, totalFees, totalDeposited, totalWithdrawn := buildHoldings(txns)
 
 var holdings []models.Holding
 var totalCost, totalValue, totalUnrealized, totalRealized, totalDividends float64
@@ -406,18 +523,20 @@ dayChangePct = totalDayChange / (grandTotal - totalDayChange) * 100
 }
 
 portfolio := models.Portfolio{
-Holdings:            holdings,
-TotalValue:          totalValue,
-TotalCost:           totalCost,
-TotalUnrealizedGain: totalUnrealized,
-TotalRealizedGain:   totalRealized,
-TotalDividends:      totalDividends,
-TotalInterest:       totalInterest,
-TotalFees:           totalFees,
-TotalTaxes:          totalTaxes,
-CashBalance:         cashBalance,
-DayChange:           totalDayChange,
-DayChangePct:        dayChangePct,
+Holdings:               holdings,
+TotalValue:             totalValue,
+TotalCost:              totalCost,
+TotalUnrealizedGain:    totalUnrealized,
+TotalRealizedGain:      totalRealized,
+TotalDividends:         totalDividends,
+TotalInterest:          totalInterest,
+TotalFees:              totalFees,
+TotalTaxes:             totalTaxes,
+TotalDeposited:         totalDeposited,
+TotalWithdrawn:         totalWithdrawn,
+CashBalance:            cashBalance,
+DayChange:              totalDayChange,
+DayChangePct:           dayChangePct,
 }
 if totalCost > 0 {
 portfolio.TotalUnrealizedGainPct = totalUnrealized / totalCost * 100
@@ -437,7 +556,31 @@ if err != nil {
 c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 return
 }
-c.JSON(http.StatusOK, quote)
+
+// Return camelCase keys matching the frontend expectations.
+// Also merge in asset profile (sector/country/industry) when available.
+resp := gin.H{
+"symbol":           quote.Symbol,
+"name":             quote.LongName,
+"price":            quote.Price,
+"change":           quote.Change,
+"changePercent":    quote.ChangePct,
+"currency":         quote.Currency,
+"exchange":         quote.Exchange,
+"marketCap":        quote.MarketCap,
+"volume":           quote.Volume,
+"fiftyTwoWeekHigh": quote.FiftyTwoWeekHigh,
+"fiftyTwoWeekLow":  quote.FiftyTwoWeekLow,
+}
+
+if profile, pErr := yahoo.GetAssetProfile(symbol); pErr == nil && profile != nil {
+resp["sector"]      = profile.Sector
+resp["industry"]    = profile.Industry
+resp["country"]     = profile.Country
+resp["description"] = profile.Description
+}
+
+c.JSON(http.StatusOK, resp)
 }
 
 func (h *Handlers) SearchSymbol(c *gin.Context) {
@@ -451,7 +594,20 @@ if err != nil {
 c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 return
 }
-c.JSON(http.StatusOK, results)
+// Normalize to camelCase with `name` field for the frontend
+type searchItem struct {
+Symbol string `json:"symbol"`
+Name   string `json:"name"`
+}
+out := make([]searchItem, 0, len(results))
+for _, r := range results {
+name := r.LongName
+if name == "" {
+name = r.ShortName
+}
+out = append(out, searchItem{Symbol: r.Symbol, Name: name})
+}
+c.JSON(http.StatusOK, out)
 }
 
 // GetAssetProfile returns sector/industry/country info for a symbol from Yahoo Finance.
@@ -500,7 +656,8 @@ c.JSON(http.StatusOK, points)
 
 func (h *Handlers) GetChartData(c *gin.Context) {
 var txns []models.Transaction
-if err := h.db.Order("date asc").Find(&txns).Error; err != nil {
+pid := portfolioID(c)
+if err := h.db.Where("portfolio_id = ?", pid).Order("date asc").Find(&txns).Error; err != nil {
 c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 return
 }
@@ -525,10 +682,27 @@ Value: runningInvested,
 }
 
 monthlyDividends := map[string]float64{}
+typeTotals := map[string]float64{}
 for _, t := range txns {
 if t.Type == models.TypeDividend {
 key := t.Date.Format("2006-01")
 monthlyDividends[key] += t.Amount
+}
+switch t.Type {
+case models.TypeBuy:
+typeTotals["buy"] += t.Quantity * t.Price
+case models.TypeSell:
+typeTotals["sell"] += t.Quantity * t.Price
+case models.TypeDividend:
+typeTotals["dividend"] += t.Amount
+case models.TypeInterestEarning:
+typeTotals["interest_earning"] += t.Amount
+case models.TypeTax:
+typeTotals["tax"] += t.Amount
+case models.TypeDeposit:
+typeTotals["deposit"] += t.Amount
+case models.TypeWithdrawal:
+typeTotals["withdrawal"] += t.Amount
 }
 }
 
@@ -542,9 +716,22 @@ for _, k := range divKeys {
 dividends = append(dividends, models.TimeSeriesPoint{Date: k, Value: monthlyDividends[k]})
 }
 
+type typeSummaryItem struct {
+Type  string  `json:"type"`
+Total float64 `json:"total"`
+}
+var typeSummary []typeSummaryItem
+for typ, total := range typeTotals {
+typeSummary = append(typeSummary, typeSummaryItem{Type: typ, Total: total})
+}
+sort.Slice(typeSummary, func(i, j int) bool {
+return typeSummary[i].Total > typeSummary[j].Total
+})
+
 c.JSON(http.StatusOK, gin.H{
-"invested":  invested,
-"dividends": dividends,
+"invested":    invested,
+"dividends":   dividends,
+"typeSummary": typeSummary,
 })
 }
 
@@ -554,7 +741,8 @@ c.JSON(http.StatusOK, gin.H{
 
 func (h *Handlers) GetDividendCalendar(c *gin.Context) {
 var txns []models.Transaction
-if err := h.db.Order("date asc").Find(&txns).Error; err != nil {
+pid := portfolioID(c)
+if err := h.db.Where("portfolio_id = ?", pid).Order("date asc").Find(&txns).Error; err != nil {
 c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 return
 }
@@ -570,7 +758,7 @@ oldestBuyDate = t.Date
 }
 
 // Collect holding names, quantity, and currency from portfolio
-accums, _, _, _, _, _ := buildHoldings(txns)
+accums, _, _, _, _, _, _ := buildHoldings(txns)
 holdingNames    := map[string]string{}
 holdingQty      := map[string]float64{}
 holdingCurrency := map[string]string{}
@@ -707,7 +895,106 @@ sort.Slice(entries, func(i, j int) bool {
 return entries[i].Date < entries[j].Date
 })
 
-c.JSON(http.StatusOK, entries)
+// Build response structure for frontend
+// Group entries into months for the calendar grid
+type calendarMonth struct {
+Year   int                            `json:"year"`
+Month  int                            `json:"month"`
+Events []models.DividendCalendarEntry `json:"events"`
+}
+
+monthMap := map[string]*calendarMonth{}
+for _, e := range entries {
+d, _ := time.Parse("2006-01-02", e.Date)
+key := fmt.Sprintf("%d-%02d", d.Year(), d.Month())
+if _, ok := monthMap[key]; !ok {
+monthMap[key] = &calendarMonth{Year: d.Year(), Month: int(d.Month())}
+}
+monthMap[key].Events = append(monthMap[key].Events, e)
+}
+monthKeys := make([]string, 0, len(monthMap))
+for k := range monthMap {
+monthKeys = append(monthKeys, k)
+}
+sort.Strings(monthKeys)
+months := make([]*calendarMonth, 0, len(monthKeys))
+for _, k := range monthKeys {
+months = append(months, monthMap[k])
+}
+
+// Upcoming entries (future date, sorted)
+var upcoming []models.DividendCalendarEntry
+for _, e := range entries {
+d, _ := time.Parse("2006-01-02", e.Date)
+if d.After(now) {
+upcoming = append(upcoming, e)
+}
+}
+
+// Annual totals
+annualTotals := map[int]float64{}
+for _, e := range entries {
+if e.EntryType == "paid" {
+d, _ := time.Parse("2006-01-02", e.Date)
+annualTotals[d.Year()] += e.TotalAmount
+}
+}
+type annualItem struct {
+Year  int     `json:"year"`
+Total float64 `json:"total"`
+}
+annualKeys := make([]int, 0, len(annualTotals))
+for yr := range annualTotals {
+annualKeys = append(annualKeys, yr)
+}
+sort.Ints(annualKeys)
+annual := make([]annualItem, 0, len(annualKeys))
+for _, yr := range annualKeys {
+annual = append(annual, annualItem{Year: yr, Total: annualTotals[yr]})
+}
+
+// Summary metrics
+var totalDividends, totalDivLast12, annualForecast float64
+twelveMonthsAgo := now.AddDate(-1, 0, 0)
+for _, e := range entries {
+if e.EntryType == "paid" {
+totalDividends += e.TotalAmount
+d, _ := time.Parse("2006-01-02", e.Date)
+if d.After(twelveMonthsAgo) {
+totalDivLast12 += e.TotalAmount
+}
+}
+}
+for _, e := range upcoming {
+if e.EntryType == "forecast" {
+annualForecast += e.TotalAmount
+}
+}
+
+// Compute invested capital for yield calculation
+accums2, _, _, _, _, _, _ := buildHoldings(txns)
+var investedCapital float64
+for _, a := range accums2 {
+investedCapital += a.totalCost
+}
+
+yieldOnCost := 0.0
+personalYieldPA := 0.0
+if investedCapital > 0 {
+yieldOnCost = totalDividends / investedCapital
+personalYieldPA = totalDivLast12 / investedCapital
+}
+
+c.JSON(http.StatusOK, gin.H{
+"months":              months,
+"upcoming":            upcoming,
+"annual":              annual,
+"totalDividends":      totalDividends,
+"totalDividendsLast12": totalDivLast12,
+"annualForecast":      annualForecast,
+"yieldOnCost":         yieldOnCost,
+"personalYieldPA":     personalYieldPA,
+})
 }
 
 // inferFrequency analyses historical dividend events to guess the payment cadence.

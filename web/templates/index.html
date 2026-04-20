@@ -21,24 +21,35 @@
         <i class="fa-solid fa-chevron-left" id="sidebarCollapseIcon"></i>
       </button>
     </div>
+
+    <!-- Portfolio Switcher -->
+    <div class="portfolio-switcher" id="portfolioSwitcher">
+      <div class="portfolio-current" id="portfolioCurrent">
+        <i class="fa-solid fa-folder-open portfolio-icon"></i>
+        <span class="portfolio-name" id="portfolioName">Default</span>
+        <i class="fa-solid fa-chevron-down portfolio-chevron"></i>
+      </div>
+      <ul class="portfolio-dropdown hidden" id="portfolioDropdown"><!-- filled by JS --></ul>
+    </div>
+
     <nav class="sidebar-nav">
       <a href="#" class="nav-item active" data-page="dashboard">
-        <i class="fa-solid fa-gauge-high"></i><span>Dashboard</span>
+        <i class="fa-solid fa-gauge-high"></i><span data-i18n="nav.dashboard">Dashboard</span>
       </a>
       <a href="#" class="nav-item" data-page="holdings">
-        <i class="fa-solid fa-briefcase"></i><span>Holdings</span>
+        <i class="fa-solid fa-briefcase"></i><span data-i18n="nav.holdings">Holdings</span>
       </a>
       <a href="#" class="nav-item" data-page="transactions">
-        <i class="fa-solid fa-list-ul"></i><span>Transactions</span>
+        <i class="fa-solid fa-list-ul"></i><span data-i18n="nav.transactions">Transactions</span>
       </a>
       <a href="#" class="nav-item" data-page="calendar">
-        <i class="fa-solid fa-calendar-days"></i><span>Dividends</span>
+        <i class="fa-solid fa-calendar-days"></i><span data-i18n="nav.dividends">Dividends</span>
       </a>
       <a href="#" class="nav-item" data-page="analytics">
-        <i class="fa-solid fa-chart-bar"></i><span>Analytics</span>
+        <i class="fa-solid fa-chart-bar"></i><span data-i18n="nav.analytics">Analytics</span>
       </a>
       <a href="#" class="nav-item" data-page="settings">
-        <i class="fa-solid fa-gear"></i><span>Settings</span>
+        <i class="fa-solid fa-gear"></i><span data-i18n="nav.settings">Settings</span>
       </a>
     </nav>
     <div class="sidebar-bottom">
@@ -59,7 +70,7 @@
         <div class="search-wrapper">
           <i class="fa-solid fa-magnifying-glass"></i>
           <input type="text" id="stockSearch" placeholder="Search symbol…" autocomplete="off" />
-          <ul id="searchResults" class="search-dropdown hidden"></ul>
+          <ul id="stockResults" class="search-dropdown hidden"></ul>
         </div>
         <button class="btn btn-primary" id="addTxnBtn">
           <i class="fa-solid fa-plus"></i><span class="btn-label"> Add Transaction</span>
@@ -74,31 +85,31 @@
       <section id="page-dashboard" class="page active">
         <div class="metrics-grid">
           <div class="metric-card" id="mc-total">
-            <div class="metric-label"><i class="fa-solid fa-wallet metric-icon"></i>Total Portfolio Value</div>
+            <div class="metric-label"><i class="fa-solid fa-wallet metric-icon"></i><span data-i18n="metric.total_value">Total Portfolio Value</span></div>
             <div class="metric-value" id="mv-total">–</div>
             <div class="metric-sub" id="ms-total"></div>
           </div>
           <div class="metric-card" id="mc-unrealized">
-            <div class="metric-label"><i class="fa-solid fa-arrow-trend-up metric-icon"></i>Unrealized Gain / Loss</div>
+            <div class="metric-label"><i class="fa-solid fa-arrow-trend-up metric-icon"></i><span data-i18n="metric.unrealized">Unrealized Gain / Loss</span></div>
             <div class="metric-value" id="mv-unrealized">–</div>
             <div class="metric-sub" id="ms-unrealized"></div>
           </div>
           <div class="metric-card" id="mc-day">
-            <div class="metric-label"><i class="fa-solid fa-sun metric-icon"></i>Day Change</div>
+            <div class="metric-label"><i class="fa-solid fa-sun metric-icon"></i><span data-i18n="metric.day_change">Day Change</span></div>
             <div class="metric-value" id="mv-day">–</div>
             <div class="metric-sub" id="ms-day"></div>
           </div>
           <div class="metric-card" id="mc-cash">
-            <div class="metric-label"><i class="fa-solid fa-coins metric-icon"></i>Cash Balance</div>
+            <div class="metric-label"><i class="fa-solid fa-coins metric-icon"></i><span data-i18n="metric.cash">Cash Balance</span></div>
             <div class="metric-value" id="mv-cash">–</div>
-            <div class="metric-sub" id="ms-cash">Available</div>
+            <div class="metric-sub" id="ms-cash" data-i18n="metric.available">Available</div>
           </div>
         </div>
 
         <div class="charts-row">
           <div class="chart-card chart-allocation">
             <div class="chart-card-header">
-              <span class="chart-card-title">Portfolio Allocation</span>
+              <span class="chart-card-title" data-i18n="chart.allocation">Portfolio Allocation</span>
             </div>
             <div class="chart-wrap">
               <canvas id="allocationChart"></canvas>
@@ -106,7 +117,15 @@
           </div>
           <div class="chart-card chart-performance">
             <div class="chart-card-header">
-              <span class="chart-card-title">Invested Capital Over Time</span>
+              <span class="chart-card-title" data-i18n="chart.invested">Invested Capital Over Time</span>
+              <div class="period-btns" id="investedPeriodBtns">
+                <button class="period-btn" data-invested-period="1mo">1M</button>
+                <button class="period-btn" data-invested-period="3mo">3M</button>
+                <button class="period-btn" data-invested-period="6mo">6M</button>
+                <button class="period-btn" data-invested-period="ytd">YTD</button>
+                <button class="period-btn" data-invested-period="1y">1Y</button>
+                <button class="period-btn active" data-invested-period="all">ALL</button>
+              </div>
             </div>
             <div class="chart-wrap">
               <canvas id="performanceChart"></canvas>
@@ -114,38 +133,35 @@
           </div>
         </div>
 
-        <!-- Advanced Stock Price Chart -->
+        <!-- Portfolio Performance vs Benchmark -->
         <div class="chart-card mb-lg">
           <div class="chart-card-header">
-            <span class="chart-card-title"><i class="fa-solid fa-chart-candlestick" style="color:var(--primary)"></i> Stock Price Chart</span>
+            <span class="chart-card-title" data-i18n="chart.perf">Portfolio Performance vs Benchmark</span>
             <div class="chart-toolbar">
               <div class="search-wrapper search-compact">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="chartSymbolInput" placeholder="Symbol (e.g. AAPL)" autocomplete="off" />
-                <ul id="chartSymbolResults" class="search-dropdown hidden"></ul>
+                <input type="text" id="benchmarkInput" placeholder="Benchmark (e.g. SPY)" autocomplete="off" />
+                <ul id="benchmarkResults" class="search-dropdown hidden"></ul>
               </div>
-              <div class="period-btns">
-                <button class="period-btn active" data-period="1mo">1M</button>
-                <button class="period-btn" data-period="3mo">3M</button>
-                <button class="period-btn" data-period="6mo">6M</button>
-                <button class="period-btn" data-period="1y">1Y</button>
-                <button class="period-btn" data-period="2y">2Y</button>
-                <button class="period-btn" data-period="5y">5Y</button>
+              <div class="period-btns" id="perfPeriodBtns">
+                <button class="period-btn" data-perf-period="1mo">1M</button>
+                <button class="period-btn" data-perf-period="3mo">3M</button>
+                <button class="period-btn" data-perf-period="6mo">6M</button>
+                <button class="period-btn" data-perf-period="ytd">YTD</button>
+                <button class="period-btn active" data-perf-period="1y">1Y</button>
+                <button class="period-btn" data-perf-period="2y">2Y</button>
+                <button class="period-btn" data-perf-period="5y">5Y</button>
               </div>
             </div>
           </div>
-          <div class="stock-chart-info" id="stockChartInfo"></div>
           <div class="chart-wrap chart-wrap-tall">
-            <canvas id="stockPriceChart"></canvas>
-          </div>
-          <div class="chart-wrap chart-wrap-volume">
-            <canvas id="stockVolumeChart"></canvas>
+            <canvas id="portfolioPerfChart"></canvas>
           </div>
         </div>
 
         <div class="section-header">
-          <h2>Recent Transactions</h2>
-          <a href="#" class="link" data-page="transactions">View all</a>
+          <h2 data-i18n="section.recent_txns">Recent Transactions</h2>
+          <a href="#" class="link" data-page="transactions" data-i18n="btn.view_all">View all</a>
         </div>
         <div id="recentTxns" class="txn-table-wrap">
           <div class="empty-state"><i class="fa-solid fa-receipt"></i><p>No transactions yet</p></div>
@@ -155,40 +171,44 @@
       <!-- ── HOLDINGS ── -->
       <section id="page-holdings" class="page">
         <div class="section-header">
-          <h2>Current Holdings</h2>
+          <h2 data-i18n="section.holdings">Current Holdings</h2>
           <div class="filter-row">
             <div class="search-wrapper search-compact" style="display:flex">
               <i class="fa-solid fa-magnifying-glass"></i>
-              <input type="text" id="holdingSearch" placeholder="Filter holdings…" autocomplete="off" />
+              <input type="text" id="holdingSearch" placeholder="Filter holdings…" autocomplete="off" data-i18n-ph="filter.holdings" />
             </div>
             <button class="btn btn-ghost btn-sm" id="refreshHoldings">
-              <i class="fa-solid fa-rotate"></i><span class="btn-label"> Refresh Prices</span>
+              <i class="fa-solid fa-rotate"></i><span class="btn-label" data-i18n="btn.refresh"> Refresh Prices</span>
+            </button>
+            <button class="btn btn-primary btn-sm" id="addTxnBtnHoldings">
+              <i class="fa-solid fa-plus"></i><span class="btn-label" data-i18n="btn.add_txn"> Add Transaction</span>
             </button>
           </div>
         </div>
         <div id="holdingsTable" class="table-wrap">
-          <div class="empty-state"><i class="fa-solid fa-briefcase"></i><p>No holdings yet</p></div>
+          <div class="empty-state"><i class="fa-solid fa-briefcase"></i><p data-i18n="empty.no_holdings">No holdings yet</p></div>
         </div>
+        <div id="holdingCards" class="holding-cards"></div>
         <!-- Holding detail panel (shown when a holding row is clicked) -->
         <div id="holdingDetailPanel" class="holding-detail-panel hidden"></div>
         <div class="section-header mt-lg">
-          <h2>Additional Info</h2>
+          <h2 data-i18n="section.additional">Additional Info</h2>
         </div>
         <div class="metrics-grid" id="extraMetrics">
           <div class="metric-card">
-            <div class="metric-label">Realized Gain / Loss</div>
+            <div class="metric-label" data-i18n="metric.realized">Realized Gain / Loss</div>
             <div class="metric-value" id="mv-realized">–</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Total Dividends</div>
+            <div class="metric-label" data-i18n="metric.dividends">Total Dividends</div>
             <div class="metric-value" id="mv-dividends">–</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Interest Earned</div>
+            <div class="metric-label" data-i18n="metric.interest">Interest Earned</div>
             <div class="metric-value" id="mv-interest">–</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Total Fees</div>
+            <div class="metric-label" data-i18n="metric.fees">Total Fees</div>
             <div class="metric-value" id="mv-fees">–</div>
           </div>
         </div>
@@ -197,70 +217,70 @@
       <!-- ── TRANSACTIONS ── -->
       <section id="page-transactions" class="page">
         <div class="section-header">
-          <h2>Transaction History</h2>
+          <h2 data-i18n="section.txn_history">Transaction History</h2>
           <div class="filter-row">
             <select id="filterType" class="select-sm">
-              <option value="">All types</option>
-              <option value="buy">Buy</option>
-              <option value="sell">Sell</option>
-              <option value="split">Split</option>
-              <option value="dividend">Dividend</option>
-              <option value="interest_earning">Interest</option>
-              <option value="tax">Tax</option>
-              <option value="withdrawal">Withdrawal</option>
-              <option value="deposit">Deposit</option>
+              <option value="" data-i18n="filter.all_types">All types</option>
+              <option value="buy" data-i18n="type.buy">Buy</option>
+              <option value="sell" data-i18n="type.sell">Sell</option>
+              <option value="split" data-i18n="type.split">Split</option>
+              <option value="dividend" data-i18n="type.dividend">Dividend</option>
+              <option value="interest_earning" data-i18n="type.interest">Interest</option>
+              <option value="tax" data-i18n="type.tax">Tax</option>
+              <option value="withdrawal" data-i18n="type.withdrawal">Withdrawal</option>
+              <option value="deposit" data-i18n="type.deposit">Deposit</option>
             </select>
             <button class="btn btn-ghost btn-sm" id="exportCsvBtn">
-              <i class="fa-solid fa-download"></i> Export CSV
+              <i class="fa-solid fa-download"></i> <span data-i18n="btn.export_csv">Export CSV</span>
             </button>
             <label class="btn btn-ghost btn-sm" for="importCsvInput" style="cursor:pointer">
-              <i class="fa-solid fa-upload"></i> Import CSV
+              <i class="fa-solid fa-upload"></i> <span data-i18n="btn.import_csv">Import CSV</span>
             </label>
             <input type="file" id="importCsvInput" accept=".csv" class="hidden" />
           </div>
         </div>
         <div id="transactionsTable" class="table-wrap">
-          <div class="empty-state"><i class="fa-solid fa-list-ul"></i><p>No transactions yet</p></div>
+          <div class="empty-state"><i class="fa-solid fa-list-ul"></i><p data-i18n="empty.no_txns">No transactions yet</p></div>
         </div>
       </section>
 
       <!-- ── DIVIDEND CALENDAR ── -->
       <section id="page-calendar" class="page">
         <div class="section-header">
-          <h2>Dividend Calendar</h2>
+          <h2 data-i18n="section.div_calendar">Dividend Calendar</h2>
           <button class="btn btn-ghost btn-sm" id="refreshCalendar">
-            <i class="fa-solid fa-rotate"></i> Refresh
+            <i class="fa-solid fa-rotate"></i> <span data-i18n="btn.refresh_calendar">Refresh</span>
           </button>
         </div>
 
         <!-- Dividend metrics -->
         <div class="metrics-grid" id="divMetrics">
           <div class="metric-card">
-            <div class="metric-label"><i class="fa-solid fa-circle-dollar-to-slot metric-icon"></i>Total Dividends Received</div>
+            <div class="metric-label"><i class="fa-solid fa-circle-dollar-to-slot metric-icon"></i><span data-i18n="metric.div_total">Total Dividends Received</span></div>
             <div class="metric-value" id="dv-total">–</div>
             <div class="metric-sub" id="dv-total-sub"></div>
           </div>
           <div class="metric-card">
-            <div class="metric-label"><i class="fa-solid fa-percent metric-icon"></i>Dividend Yield on Cost</div>
+            <div class="metric-label"><i class="fa-solid fa-percent metric-icon"></i><span data-i18n="metric.div_yield">Dividend Yield on Cost</span></div>
             <div class="metric-value positive" id="dv-yield">–</div>
-            <div class="metric-sub" id="dv-yield-sub">Total dividends / invested capital</div>
+            <div class="metric-sub" id="dv-yield-sub" data-i18n="metric.div_yield_sub">Total dividends / invested capital</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label"><i class="fa-solid fa-calendar-check metric-icon"></i>Personal Div. Yield p.a.</div>
+            <div class="metric-label"><i class="fa-solid fa-calendar-check metric-icon"></i><span data-i18n="metric.div_pa">Personal Div. Yield p.a.</span></div>
             <div class="metric-value positive" id="dv-pa">–</div>
-            <div class="metric-sub">Last 12 months / invested capital</div>
+            <div class="metric-sub" data-i18n="metric.div_pa_sub">Last 12 months / invested capital</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label"><i class="fa-solid fa-arrow-trend-up metric-icon"></i>Annual Forecast</div>
+            <div class="metric-label"><i class="fa-solid fa-arrow-trend-up metric-icon"></i><span data-i18n="metric.div_forecast">Annual Forecast</span></div>
             <div class="metric-value positive" id="dv-forecast">–</div>
-            <div class="metric-sub">Next 12 months (estimated)</div>
+            <div class="metric-sub" data-i18n="metric.div_forecast_sub">Next 12 months (estimated)</div>
           </div>
         </div>
 
         <!-- Annual dividend comparison -->
         <div class="chart-card mb-lg" id="annualDivCard">
           <div class="chart-card-header">
-            <span class="chart-card-title">Annual Dividends – Year over Year</span>
+            <span class="chart-card-title" data-i18n="chart.annual_div">Annual Dividends – Year over Year</span>
           </div>
           <div class="chart-wrap" style="height:200px">
             <canvas id="annualDivChart"></canvas>
@@ -268,16 +288,16 @@
         </div>
 
         <div class="calendar-legend">
-          <span class="cal-dot cal-paid"></span> Paid (recorded)
-          <span class="cal-dot cal-yahoo"></span> Paid (Yahoo Finance)
-          <span class="cal-dot cal-upcoming"></span> Upcoming (est.)
-          <span class="cal-dot cal-forecast"></span> Forecasted
+          <span class="cal-dot cal-paid"></span> <span data-i18n="cal.paid">Paid (recorded)</span>
+          <span class="cal-dot cal-yahoo"></span> <span data-i18n="cal.yahoo">Paid (Yahoo Finance)</span>
+          <span class="cal-dot cal-upcoming"></span> <span data-i18n="cal.upcoming">Upcoming (est.)</span>
+          <span class="cal-dot cal-forecast"></span> <span data-i18n="cal.forecast">Forecasted</span>
         </div>
-        <div id="calendarContent" class="calendar-wrap">
+        <div id="dividendCalendar" class="calendar-wrap">
           <div class="empty-state"><i class="fa-solid fa-calendar-days"></i><p>Loading dividend calendar…</p></div>
         </div>
         <div class="section-header mt-lg">
-          <h2>Upcoming Dividends (next 12 months)</h2>
+          <h2 data-i18n="section.upcoming_div">Upcoming Dividends (next 12 months)</h2>
         </div>
         <div id="upcomingDividends" class="table-wrap">
           <div class="empty-state"><i class="fa-solid fa-circle-dollar-to-slot"></i><p>No upcoming dividends</p></div>
@@ -289,7 +309,7 @@
         <div class="charts-row charts-col">
           <div class="chart-card">
             <div class="chart-card-header">
-              <span class="chart-card-title">Monthly Dividends</span>
+              <span class="chart-card-title" data-i18n="chart.monthly_div">Monthly Dividends</span>
             </div>
             <div class="chart-wrap">
               <canvas id="dividendsChart"></canvas>
@@ -297,7 +317,7 @@
           </div>
           <div class="chart-card">
             <div class="chart-card-header">
-              <span class="chart-card-title">Transaction Type Breakdown</span>
+              <span class="chart-card-title" data-i18n="chart.type_breakdown">Transaction Type Breakdown</span>
             </div>
             <div class="chart-wrap">
               <canvas id="typeChart"></canvas>
@@ -309,7 +329,7 @@
         <div class="charts-row charts-col">
           <div class="chart-card">
             <div class="chart-card-header">
-              <span class="chart-card-title"><i class="fa-solid fa-industry" style="color:var(--primary)"></i> Sector Allocation</span>
+              <span class="chart-card-title"><i class="fa-solid fa-industry" style="color:var(--primary)"></i> <span data-i18n="chart.sector">Sector Allocation</span></span>
             </div>
             <div class="chart-wrap" id="sectorChartWrap">
               <canvas id="sectorChart"></canvas>
@@ -318,7 +338,7 @@
           </div>
           <div class="chart-card">
             <div class="chart-card-header">
-              <span class="chart-card-title"><i class="fa-solid fa-earth-americas" style="color:var(--info)"></i> Country Allocation</span>
+              <span class="chart-card-title"><i class="fa-solid fa-earth-americas" style="color:var(--info)"></i> <span data-i18n="chart.country">Country Allocation</span></span>
             </div>
             <div class="chart-wrap" id="countryChartWrap">
               <canvas id="countryChart"></canvas>
@@ -329,19 +349,19 @@
 
         <div class="metrics-grid mt-lg" id="analyticsMetrics">
           <div class="metric-card">
-            <div class="metric-label">Total Taxes Paid</div>
+            <div class="metric-label" data-i18n="metric.taxes">Total Taxes Paid</div>
             <div class="metric-value" id="mv-taxes">–</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Net Income (Div + Int)</div>
+            <div class="metric-label" data-i18n="metric.income">Net Income (Div + Int)</div>
             <div class="metric-value" id="mv-income">–</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Total Deposited</div>
+            <div class="metric-label" data-i18n="metric.deposited">Total Deposited</div>
             <div class="metric-value" id="mv-deposited">–</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Total Withdrawn</div>
+            <div class="metric-label" data-i18n="metric.withdrawn">Total Withdrawn</div>
             <div class="metric-value" id="mv-withdrawn">–</div>
           </div>
         </div>
@@ -350,19 +370,19 @@
       <!-- ── SETTINGS ── -->
       <section id="page-settings" class="page">
         <div class="section-header">
-          <h2>Settings</h2>
+          <h2 data-i18n="section.settings">Settings</h2>
           <button class="btn btn-primary btn-sm" id="saveSettingsBtn">
-            <i class="fa-solid fa-floppy-disk"></i> Save Settings
+            <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="btn.save_settings">Save Settings</span>
           </button>
         </div>
 
         <div class="settings-grid">
           <!-- Display Currency -->
           <div class="settings-card">
-            <div class="settings-card-title"><i class="fa-solid fa-coins"></i> Display Currency</div>
-            <p class="settings-desc">Default currency used when displaying portfolio values.</p>
+            <div class="settings-card-title"><i class="fa-solid fa-coins"></i> <span data-i18n="settings.currency">Display Currency</span></div>
+            <p class="settings-desc" data-i18n="settings.currency_desc">Default currency used when displaying portfolio values.</p>
             <div class="form-group">
-              <label for="setCurrency">Currency</label>
+              <label for="setCurrency" data-i18n="form.currency">Currency</label>
               <select id="setCurrency" class="select-sm" style="width:100%;max-width:240px">
                 <option value="USD">USD – US Dollar</option>
                 <option value="EUR">EUR – Euro</option>
@@ -382,10 +402,10 @@
 
           <!-- Language / Locale -->
           <div class="settings-card">
-            <div class="settings-card-title"><i class="fa-solid fa-language"></i> Language &amp; Format</div>
-            <p class="settings-desc">Controls date and number formatting throughout the app.</p>
+            <div class="settings-card-title"><i class="fa-solid fa-language"></i> <span data-i18n="settings.locale">Language &amp; Format</span></div>
+            <p class="settings-desc" data-i18n="settings.locale_desc">Controls date and number formatting throughout the app.</p>
             <div class="form-group">
-              <label for="setLocale">Language / Region</label>
+              <label for="setLocale" data-i18n="settings.locale">Language / Region</label>
               <select id="setLocale" class="select-sm" style="width:100%;max-width:240px">
                 <option value="en-US">English (US) – MM/DD/YYYY, $1,234.56</option>
                 <option value="en-GB">English (UK) – DD/MM/YYYY, £1,234.56</option>
@@ -403,21 +423,34 @@
 
           <!-- Date Format Preview -->
           <div class="settings-card">
-            <div class="settings-card-title"><i class="fa-solid fa-calendar"></i> Format Preview</div>
-            <p class="settings-desc">How dates and numbers will appear in the app.</p>
+            <div class="settings-card-title"><i class="fa-solid fa-calendar"></i> <span data-i18n="settings.preview">Format Preview</span></div>
+            <p class="settings-desc" data-i18n="settings.preview_desc">How dates and numbers will appear in the app.</p>
             <div class="settings-preview" id="settingsPreview"></div>
           </div>
 
           <!-- Sidebar behavior -->
           <div class="settings-card">
-            <div class="settings-card-title"><i class="fa-solid fa-sidebar"></i> Sidebar</div>
-            <p class="settings-desc">Keep sidebar collapsed by default (icon-only mode).</p>
+            <div class="settings-card-title"><i class="fa-solid fa-sidebar"></i> <span data-i18n="settings.sidebar">Sidebar</span></div>
+            <p class="settings-desc" data-i18n="settings.sidebar_desc">Keep sidebar collapsed by default (icon-only mode).</p>
             <div class="settings-toggle-row">
-              <label class="toggle-label" for="setCollapsedDefault">Collapsed by default</label>
+              <label class="toggle-label" for="setCollapsedDefault" data-i18n="settings.collapsed">Collapsed by default</label>
               <label class="toggle-switch">
                 <input type="checkbox" id="setCollapsedDefault" />
                 <span class="toggle-slider"></span>
               </label>
+            </div>
+          </div>
+
+          <!-- Portfolio Management -->
+          <div class="settings-card settings-card-wide">
+            <div class="settings-card-title"><i class="fa-solid fa-folder-tree"></i> <span data-i18n="settings.portfolios">Portfolio Management</span></div>
+            <p class="settings-desc" data-i18n="settings.portfolios_desc">Create and manage multiple portfolios. Each portfolio has its own transactions.</p>
+            <div id="portfolioList" class="portfolio-list"><!-- filled by JS --></div>
+            <div class="portfolio-create-row">
+              <input type="text" id="newPortfolioName" class="input-sm" placeholder="Portfolio name" data-i18n-ph="portfolio.name_placeholder" />
+              <button class="btn btn-primary btn-sm" id="createPortfolioBtn">
+                <i class="fa-solid fa-plus"></i> <span data-i18n="portfolio.create">Create Portfolio</span>
+              </button>
             </div>
           </div>
         </div>
@@ -427,7 +460,7 @@
   </main>
 
   <!-- ── TRANSACTION MODAL ── -->
-  <div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal-overlay hidden" id="txnModal">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal-header">
         <h3 id="modalTitle">Add Transaction</h3>
@@ -463,7 +496,7 @@
             <div class="symbol-input-wrap">
               <input type="text" id="txnSymbol" placeholder="e.g. AAPL" autocomplete="off"
                      style="text-transform:uppercase" />
-              <ul id="modalSearchResults" class="search-dropdown hidden"></ul>
+              <ul id="txnSymbolResults" class="search-dropdown hidden"></ul>
             </div>
           </div>
           <div class="form-group">
@@ -472,31 +505,51 @@
           </div>
         </div>
 
-        <div class="form-row" id="qtyPriceRow">
-          <div class="form-group" id="qtyGroup">
-            <label for="txnQty" id="qtyLabel">Quantity</label>
-            <input type="number" id="txnQty" min="0" step="any" placeholder="0" />
+        <div class="form-row" id="qtyRow">
+          <div class="form-group">
+            <label for="txnQuantity" data-i18n="form.qty">Quantity</label>
+            <input type="number" id="txnQuantity" min="0" step="any" placeholder="0" />
           </div>
-          <div class="form-group" id="priceGroup">
-            <label for="txnPrice">Price per Share</label>
+        </div>
+
+        <div class="form-row" id="priceRow">
+          <div class="form-group">
+            <label for="txnPrice" data-i18n="form.price">Price per Share</label>
             <input type="number" id="txnPrice" min="0" step="any" placeholder="0.00" />
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group" id="amountGroup">
-            <label for="txnAmount" id="amountLabel">Amount</label>
+        <div class="form-row" id="feesRow">
+          <div class="form-group">
+            <label for="txnFees" data-i18n="form.fees">Fees / Commission</label>
+            <input type="number" id="txnFees" min="0" step="any" placeholder="0.00" />
+          </div>
+        </div>
+
+        <div class="form-row" id="amountRow">
+          <div class="form-group">
+            <label for="txnAmount" data-i18n="form.amount">Amount</label>
             <input type="number" id="txnAmount" min="0" step="any" placeholder="0.00" />
           </div>
+        </div>
+
+        <div class="form-row" id="splitRatioRow">
           <div class="form-group">
-            <label for="txnFees">Fees / Commission</label>
-            <input type="number" id="txnFees" min="0" step="any" placeholder="0.00" />
+            <label for="txnSplitRatio" data-i18n="form.split_ratio">Split Ratio (e.g. 2)</label>
+            <input type="number" id="txnSplitRatio" min="0" step="any" placeholder="2" />
+          </div>
+        </div>
+
+        <div class="form-row" id="divAmountRow">
+          <div class="form-group">
+            <label for="txnDivAmount" data-i18n="form.div_amount">Dividend Amount</label>
+            <input type="number" id="txnDivAmount" min="0" step="any" placeholder="0.00" />
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label for="txnCurrency">Currency</label>
+            <label for="txnCurrency" data-i18n="form.currency">Currency</label>
             <select id="txnCurrency">
               <option value="USD">USD</option>
               <option value="EUR">EUR</option>
@@ -508,13 +561,13 @@
             </select>
           </div>
           <div class="form-group">
-            <label for="txnNotes">Notes</label>
-            <input type="text" id="txnNotes" placeholder="Optional notes" />
+            <label for="txnNotes" data-i18n="form.notes">Notes</label>
+            <input type="text" id="txnNotes" data-i18n-ph="form.notes_placeholder" placeholder="Optional notes" />
           </div>
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-ghost" id="cancelBtn">Cancel</button>
+          <button type="button" class="btn btn-ghost" id="modalCancelBtn" data-i18n="btn.cancel">Cancel</button>
           <button type="submit" class="btn btn-primary" id="saveBtn">Save</button>
         </div>
       </form>
@@ -523,6 +576,26 @@
 
   <!-- Toast notifications -->
   <div id="toast" class="toast hidden"></div>
+
+  <!-- Portfolio rename modal -->
+  <div class="modal-overlay hidden" id="renamePortfolioOverlay">
+    <div class="modal" style="max-width:380px" role="dialog">
+      <div class="modal-header">
+        <h3 data-i18n="portfolio.rename">Rename Portfolio</h3>
+        <button class="modal-close" id="renamePortfolioClose"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" style="padding-bottom:0">
+        <div class="form-group">
+          <label data-i18n="form.name">Name</label>
+          <input type="text" id="renamePortfolioInput" class="input-sm" style="width:100%" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="renamePortfolioCancelBtn" data-i18n="btn.cancel">Cancel</button>
+        <button class="btn btn-primary" id="renamePortfolioSaveBtn" data-i18n="btn.save">Save</button>
+      </div>
+    </div>
+  </div>
 
   <script src="/static/js/app.js"></script>
 </body>
