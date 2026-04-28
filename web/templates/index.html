@@ -15,6 +15,10 @@
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <i class="fa-solid fa-chart-line"></i>
+        <span class="sidebar-brand-name">Wellfolio</span>
+      </div>
       <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Collapse sidebar">
         <i class="fa-solid fa-chevron-left" id="sidebarCollapseIcon"></i>
       </button>
@@ -64,11 +68,6 @@
     <!-- Header -->
     <header class="topbar">
       <button class="menu-btn" id="menuBtn" aria-label="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
-      <div class="app-brand">
-        <i class="fa-solid fa-chart-line"></i>
-        <span>Wellfolio</span>
-      </div>
-      <div class="topbar-divider"></div>
       <div class="topbar-title" id="pageTitle">Dashboard</div>
       <div class="topbar-actions">
         <div class="search-wrapper">
@@ -456,6 +455,45 @@
                 <i class="fa-solid fa-plus"></i> <span data-i18n="portfolio.create">Create Portfolio</span>
               </button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── HOLDING DETAIL ── -->
+      <section id="page-holding" class="page">
+        <div class="section-header">
+          <div class="holding-page-back-row">
+            <button class="btn btn-ghost btn-sm" id="holdingBackBtn">
+              <i class="fa-solid fa-arrow-left"></i> <span data-i18n="btn.back">Back</span>
+            </button>
+            <div>
+              <span class="holding-page-symbol" id="holdingPageSymbol">–</span>
+              <span class="muted text-sm" id="holdingPageName"></span>
+            </div>
+          </div>
+          <div id="holdingPagePrice"></div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs" id="holdingTabs">
+          <button class="tab-btn active" data-tab="overview">Overview</button>
+          <button class="tab-btn" data-tab="financials">Financials</button>
+          <button class="tab-btn" data-tab="analyst">Analyst</button>
+        </div>
+
+        <div id="holdingTabOverview" class="tab-pane">
+          <div id="holdingOverviewContent">
+            <div class="empty-state"><p>Loading…</p></div>
+          </div>
+        </div>
+        <div id="holdingTabFinancials" class="tab-pane hidden">
+          <div id="holdingFinancialsContent">
+            <div class="empty-state"><p>Loading…</p></div>
+          </div>
+        </div>
+        <div id="holdingTabAnalyst" class="tab-pane hidden">
+          <div id="holdingAnalystContent">
+            <div class="empty-state"><p>Loading…</p></div>
           </div>
         </div>
       </section>

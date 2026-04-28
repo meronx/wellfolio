@@ -17,6 +17,7 @@ chartURL            = "https://query1.finance.yahoo.com/v8/finance/chart/%s?rang
 searchURL           = "https://query2.finance.yahoo.com/v1/finance/search?q=%s&quotesCount=10&newsCount=0"
 histURL             = "https://query2.finance.yahoo.com/v8/finance/chart/%s?range=%s&interval=%s&events=div&includeAdjustedClose=true"
 assetProfileURL     = "https://query2.finance.yahoo.com/v10/finance/quoteSummary/%s?modules=assetProfile"
+holdingDetailURL    = "https://query2.finance.yahoo.com/v10/finance/quoteSummary/%s?modules=financialData%%2CdefaultKeyStatistics%%2CrecommendationTrend"
 divHistoryPeriod    = "5y"
 divHistoryInterval  = "1mo"
 )
@@ -340,4 +341,149 @@ Country:     ap.Country,
 Website:     ap.Website,
 Description: ap.LongBusinessSummary,
 }, nil
+}
+
+// yFloat is a helper for Yahoo Finance's {"raw": value} numeric fields.
+type yFloat struct {
+Raw float64 `json:"raw"`
+}
+
+// yInt is a helper for Yahoo Finance's {"raw": value} integer fields.
+type yInt struct {
+Raw int `json:"raw"`
+}
+
+// yahooHoldingDetailResponse matches the Yahoo Finance v10 quoteSummary response
+// for the financialData, defaultKeyStatistics, and recommendationTrend modules.
+type yahooHoldingDetailResponse struct {
+QuoteSummary struct {
+Result []struct {
+FinancialData struct {
+TotalRevenue            yFloat `json:"totalRevenue"`
+GrossProfit             yFloat `json:"grossProfit"`
+Ebitda                  yFloat `json:"ebitda"`
+OperatingCashflow       yFloat `json:"operatingCashflow"`
+FreeCashflow            yFloat `json:"freeCashflow"`
+GrossMargins            yFloat `json:"grossMargins"`
+OperatingMargins        yFloat `json:"operatingMargins"`
+ProfitMargins           yFloat `json:"profitMargins"`
+RevenueGrowth           yFloat `json:"revenueGrowth"`
+EarningsGrowth          yFloat `json:"earningsGrowth"`
+ReturnOnEquity          yFloat `json:"returnOnEquity"`
+ReturnOnAssets          yFloat `json:"returnOnAssets"`
+CurrentRatio            yFloat `json:"currentRatio"`
+DebtToEquity            yFloat `json:"debtToEquity"`
+RecommendationKey       string `json:"recommendationKey"`
+TargetLowPrice          yFloat `json:"targetLowPrice"`
+TargetHighPrice         yFloat `json:"targetHighPrice"`
+TargetMeanPrice         yFloat `json:"targetMeanPrice"`
+TargetMedianPrice       yFloat `json:"targetMedianPrice"`
+NumberOfAnalystOpinions yInt   `json:"numberOfAnalystOpinions"`
+} `json:"financialData"`
+DefaultKeyStatistics struct {
+TrailingEps yFloat `json:"trailingEps"`
+ForwardEps  yFloat `json:"forwardEps"`
+TrailingPE  yFloat `json:"trailingPE"`
+ForwardPE   yFloat `json:"forwardPE"`
+PriceToBook yFloat `json:"priceToBook"`
+BookValue   yFloat `json:"bookValue"`
+Beta        yFloat `json:"beta"`
+} `json:"defaultKeyStatistics"`
+RecommendationTrend struct {
+Trend []struct {
+Period     string `json:"period"`
+StrongBuy  int    `json:"strongBuy"`
+Buy        int    `json:"buy"`
+Hold       int    `json:"hold"`
+Sell       int    `json:"sell"`
+StrongSell int    `json:"strongSell"`
+} `json:"trend"`
+} `json:"recommendationTrend"`
+} `json:"result"`
+Error *struct {
+Code        string `json:"code"`
+Description string `json:"description"`
+} `json:"error"`
+} `json:"quoteSummary"`
+}
+
+// GetHoldingDetail fetches detailed financial data and analyst recommendations
+// for a symbol from Yahoo Finance.
+func GetHoldingDetail(symbol string) (*models.HoldingDetailData, error) {
+rawURL := fmt.Sprintf(holdingDetailURL, url.PathEscape(symbol))
+body, err := doGet(rawURL)
+if err != nil {
+return nil, err
+}
+
+var parsed yahooHoldingDetailResponse
+if err := json.Unmarshal(body, &parsed); err != nil {
+return nil, err
+}
+if parsed.QuoteSummary.Error != nil {
+return nil, fmt.Errorf("yahoo finance error: %s – %s",
+parsed.QuoteSummary.Error.Code, parsed.QuoteSummary.Error.Description)
+}
+if len(parsed.QuoteSummary.Result) == 0 {
+return nil, fmt.Errorf("no detail data for symbol %s", symbol)
+}
+
+res := parsed.QuoteSummary.Result[0]
+fd := res.FinancialData
+ks := res.DefaultKeyStatistics
+
+detail := &models.HoldingDetailData{
+Symbol:            symbol,
+TotalRevenue:      fd.TotalRevenue.Raw,
+GrossProfit:       fd.GrossProfit.Raw,
+EBITDA:            fd.Ebitda.Raw,
+OperatingCashflow: fd.OperatingCashflow.Raw,
+FreeCashflow:      fd.FreeCashflow.Raw,
+GrossMargins:      fd.GrossMargins.Raw,
+OperatingMargins:  fd.OperatingMargins.Raw,
+ProfitMargins:     fd.ProfitMargins.Raw,
+RevenueGrowth:     fd.RevenueGrowth.Raw,
+EarningsGrowth:    fd.EarningsGrowth.Raw,
+ReturnOnEquity:    fd.ReturnOnEquity.Raw,
+ReturnOnAssets:    fd.ReturnOnAssets.Raw,
+CurrentRatio:      fd.CurrentRatio.Raw,
+DebtToEquity:      fd.DebtToEquity.Raw,
+RecommendationKey: fd.RecommendationKey,
+TargetLowPrice:    fd.TargetLowPrice.Raw,
+TargetHighPrice:   fd.TargetHighPrice.Raw,
+TargetMeanPrice:   fd.TargetMeanPrice.Raw,
+TargetMedianPrice: fd.TargetMedianPrice.Raw,
+NumberOfAnalysts:  fd.NumberOfAnalystOpinions.Raw,
+TrailingEPS:       ks.TrailingEps.Raw,
+ForwardEPS:        ks.ForwardEps.Raw,
+TrailingPE:        ks.TrailingPE.Raw,
+ForwardPE:         ks.ForwardPE.Raw,
+PriceToBook:       ks.PriceToBook.Raw,
+BookValue:         ks.BookValue.Raw,
+Beta:              ks.Beta.Raw,
+}
+
+// Process recommendation trend (most recent period first)
+trend := res.RecommendationTrend.Trend
+if len(trend) > 0 {
+cur := trend[0]
+detail.StrongBuy  = cur.StrongBuy
+detail.Buy        = cur.Buy
+detail.Hold       = cur.Hold
+detail.Sell       = cur.Sell
+detail.StrongSell = cur.StrongSell
+
+for _, tp := range trend {
+detail.Trend = append(detail.Trend, models.AnalystTrendPeriod{
+Period:     tp.Period,
+StrongBuy:  tp.StrongBuy,
+Buy:        tp.Buy,
+Hold:       tp.Hold,
+Sell:       tp.Sell,
+StrongSell: tp.StrongSell,
+})
+}
+}
+
+return detail, nil
 }

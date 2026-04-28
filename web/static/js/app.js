@@ -671,6 +671,7 @@ const state = {
   investedPeriod: 'all',
   perfPeriod: '1y',
   benchmarkSymbol: 'SPY',
+  currentHoldingSymbol: null,
   charts: {
     allocation: null, performance: null,
     dividends: null, typeChart: null,
@@ -1796,8 +1797,8 @@ function renderDividendsChart(dividends) {
   state.charts.dividends = new Chart(canvas, {
     type: 'bar',
     data: {
-      labels: dividends.map(d => d.month),
-      datasets: [{ label: t('chart.monthly_div'), data: dividends.map(d => d.total), backgroundColor: '#6366f1', borderRadius: 4 }],
+      labels: dividends.map(d => d.date),
+      datasets: [{ label: t('chart.monthly_div'), data: dividends.map(d => d.value), backgroundColor: '#6366f1', borderRadius: 4 }],
     },
     options: {
       responsive: true, maintainAspectRatio: false, animation: false,

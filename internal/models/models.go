@@ -157,3 +157,64 @@ type AssetProfile struct {
 	Website     string `json:"website"`
 	Description string `json:"description"`
 }
+
+// AnalystTrendPeriod contains analyst ratings for one reporting period.
+type AnalystTrendPeriod struct {
+	Period     string `json:"period"`
+	StrongBuy  int    `json:"strong_buy"`
+	Buy        int    `json:"buy"`
+	Hold       int    `json:"hold"`
+	Sell       int    `json:"sell"`
+	StrongSell int    `json:"strong_sell"`
+}
+
+// HoldingDetailData contains detailed financial data and analyst recommendations from Yahoo Finance.
+type HoldingDetailData struct {
+	Symbol string `json:"symbol"`
+
+	// Revenue & profitability
+	TotalRevenue      float64 `json:"total_revenue"`
+	GrossProfit       float64 `json:"gross_profit"`
+	EBITDA            float64 `json:"ebitda"`
+	OperatingCashflow float64 `json:"operating_cashflow"`
+	FreeCashflow      float64 `json:"free_cashflow"`
+
+	GrossMargins     float64 `json:"gross_margins"`
+	OperatingMargins float64 `json:"operating_margins"`
+	ProfitMargins    float64 `json:"profit_margins"`
+	RevenueGrowth    float64 `json:"revenue_growth"`
+	EarningsGrowth   float64 `json:"earnings_growth"`
+
+	// Returns & balance sheet
+	ReturnOnEquity float64 `json:"return_on_equity"`
+	ReturnOnAssets float64 `json:"return_on_assets"`
+	CurrentRatio   float64 `json:"current_ratio"`
+	DebtToEquity   float64 `json:"debt_to_equity"`
+
+	// Per-share & valuation
+	TrailingEPS float64 `json:"trailing_eps"`
+	ForwardEPS  float64 `json:"forward_eps"`
+	TrailingPE  float64 `json:"trailing_pe"`
+	ForwardPE   float64 `json:"forward_pe"`
+	PriceToBook float64 `json:"price_to_book"`
+	BookValue   float64 `json:"book_value"`
+	Beta        float64 `json:"beta"`
+
+	// Analyst consensus
+	RecommendationKey string  `json:"recommendation_key"`
+	TargetLowPrice    float64 `json:"target_low_price"`
+	TargetHighPrice   float64 `json:"target_high_price"`
+	TargetMeanPrice   float64 `json:"target_mean_price"`
+	TargetMedianPrice float64 `json:"target_median_price"`
+	NumberOfAnalysts  int     `json:"number_of_analysts"`
+
+	// Current-period recommendation breakdown
+	StrongBuy  int `json:"strong_buy"`
+	Buy        int `json:"buy"`
+	Hold       int `json:"hold"`
+	Sell       int `json:"sell"`
+	StrongSell int `json:"strong_sell"`
+
+	// Historical trend (up to 4 periods)
+	Trend []AnalystTrendPeriod `json:"trend"`
+}

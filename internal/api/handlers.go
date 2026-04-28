@@ -694,6 +694,17 @@ return
 c.JSON(http.StatusOK, profile)
 }
 
+// GetHoldingDetail returns detailed financials and analyst recommendations for a symbol.
+func (h *Handlers) GetHoldingDetail(c *gin.Context) {
+symbol := strings.ToUpper(c.Param("symbol"))
+detail, err := yahoo.GetHoldingDetail(symbol)
+if err != nil {
+c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+return
+}
+c.JSON(http.StatusOK, detail)
+}
+
 // GetStockHistory returns OHLC + volume data for a symbol.
 // Query params: period (default "1y"), interval (default "1d")
 func (h *Handlers) GetStockHistory(c *gin.Context) {

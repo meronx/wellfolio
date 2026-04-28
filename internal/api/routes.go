@@ -42,6 +42,7 @@ api.GET("/quote/:symbol", h.GetQuote)
 api.GET("/search", h.SearchSymbol)
 api.GET("/history/:symbol", h.GetStockHistory)
 api.GET("/asset-profile/:symbol", h.GetAssetProfile)
+api.GET("/holding-detail/:symbol", h.GetHoldingDetail)
 
 // Dividend calendar (both paths for compatibility)
 api.GET("/dividend-calendar", h.GetDividendCalendar)
